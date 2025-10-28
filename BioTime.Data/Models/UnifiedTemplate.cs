@@ -1,0 +1,21 @@
+using System;
+
+namespace BioTime.Data.Models
+{
+    public class UnifiedTemplate
+    {
+        public int Id { get; set; }
+        public string? Pin { get; set; }
+        public int No { get; set; }
+        public int Index { get; set; }
+        public int Valid { get; set; }
+        public int Duress { get; set; }
+        public int Type { get; set; }
+        public int MajorVer { get; set; }
+        public int MinorVer { get; set; }
+        public int Format { get; set; }
+        public string? Template { get; set; }
+        public int DeviceId { get; set; }
+        public Device? Device { get; set; }
+    }
+}
