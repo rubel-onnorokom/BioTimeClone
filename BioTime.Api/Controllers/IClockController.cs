@@ -300,6 +300,21 @@ namespace BioTime.Api.Controllers
 
         private async Task<int> ProcessDataRecords(string table, IEnumerable<string> lines, Device device, BioTimeDbContext context)
         {
+            // Collect entities in lists for bulk insert
+            var attendanceLogs = new List<AttendanceLog>();
+            var operationLogs = new List<OperationLog>();
+            var attendancePhotos = new List<AttendancePhoto>();
+            var userInfos = new List<UserInfo>();
+            var identityCards = new List<IdentityCard>();
+            var identityCardAttendanceLogs = new List<IdentityCardAttendanceLog>();
+            var identityCardAttendancePhotos = new List<IdentityCardAttendancePhoto>();
+            var faceTemplates = new List<FaceTemplate>();
+            var unifiedTemplates = new List<UnifiedTemplate>();
+            var fingerVeinTemplates = new List<FingerVeinTemplate>();
+            var userPhotos = new List<UserPhoto>();
+            var comparisonPhotos = new List<ComparisonPhoto>();
+            var errorLogs = new List<ErrorLog>();
+
             int recordsProcessed = 0;
 
             if (table.ToUpper() == "ATTLOG")
@@ -320,9 +335,15 @@ namespace BioTime.Api.Controllers
                             Reserved2 = fields.Length > 6 ? fields[6] : null,
                             DeviceId = device.Id
                         };
-                        context.AttendanceLogs.Add(log);
+                        attendanceLogs.Add(log);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all attendance logs
+                if (attendanceLogs.Count > 0)
+                {
+                    context.AttendanceLogs.AddRange(attendanceLogs);
                 }
             }
             else if (table.ToUpper() == "OPERLOG")
@@ -346,10 +367,16 @@ namespace BioTime.Api.Controllers
                                 Operand3 = parts.Length > 5 ? parts[5] : null,
                                 Reserved = parts.Length > 6 ? parts[6] : null,
                             };
-                            context.OperationLogs.Add(log);
+                            operationLogs.Add(log);
                             recordsProcessed++;
                         }
                     }
+                }
+                
+                // Bulk insert all operation logs
+                if (operationLogs.Count > 0)
+                {
+                    context.OperationLogs.AddRange(operationLogs);
                 }
             }
             else if (table.ToUpper() == "ATTPHOTO")
@@ -386,10 +413,15 @@ namespace BioTime.Api.Controllers
                         PhotoData = binaryData,
                         DeviceId = device.Id
                     };
-                    context.AttendancePhotos.Add(photo);
+                    attendancePhotos.Add(photo);
                     recordsProcessed++;
                 }
 
+                // Bulk insert attendance photo
+                if (attendancePhotos.Count > 0)
+                {
+                    context.AttendancePhotos.AddRange(attendancePhotos);
+                }
             }
             else if (table.ToUpper() == "USERINFO")
             {
@@ -412,9 +444,15 @@ namespace BioTime.Api.Controllers
                             ViceCard = parts.FirstOrDefault(p => p.StartsWith("ViceCard="))?.Split('=')[1],
                             DeviceId = device.Id
                         };
-                        context.UserInfos.Add(userInfo);
+                        userInfos.Add(userInfo);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all user info
+                if (userInfos.Count > 0)
+                {
+                    context.UserInfos.AddRange(userInfos);
                 }
             }
             else if (table.ToUpper() == "IDCARD")
@@ -446,9 +484,15 @@ namespace BioTime.Api.Controllers
                             Notice = parts.FirstOrDefault(p => p.StartsWith("Notice="))?.Split('=')[1],
                             DeviceId = device.Id
                         };
-                        context.IdentityCards.Add(identityCard);
+                        identityCards.Add(identityCard);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all identity cards
+                if (identityCards.Count > 0)
+                {
+                    context.IdentityCards.AddRange(identityCards);
                 }
             }
             else if (table.ToUpper() == "IDCARDATTLOG")
@@ -471,9 +515,15 @@ namespace BioTime.Api.Controllers
                             Type = int.Parse(fields[8].Split('=')[1]),
                             DeviceId = device.Id
                         };
-                        context.IdentityCardAttendanceLogs.Add(log);
+                        identityCardAttendanceLogs.Add(log);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all identity card attendance logs
+                if (identityCardAttendanceLogs.Count > 0)
+                {
+                    context.IdentityCardAttendanceLogs.AddRange(identityCardAttendanceLogs);
                 }
             }
             else if (table.ToUpper() == "IDCARDATTPHOTO")
@@ -505,8 +555,14 @@ namespace BioTime.Api.Controllers
                         PhotoData = binaryData,
                         DeviceId = device.Id
                     };
-                    context.IdentityCardAttendancePhotos.Add(photo);
+                    identityCardAttendancePhotos.Add(photo);
                     recordsProcessed++;
+                }
+                
+                // Bulk insert identity card attendance photos
+                if (identityCardAttendancePhotos.Count > 0)
+                {
+                    context.IdentityCardAttendancePhotos.AddRange(identityCardAttendancePhotos);
                 }
             }
             else if (table.ToUpper() == "FACE")
@@ -526,9 +582,15 @@ namespace BioTime.Api.Controllers
                             Template = parts.FirstOrDefault(p => p.StartsWith("TMP="))?.Split('=')[1],
                             DeviceId = device.Id
                         };
-                        context.FaceTemplates.Add(faceTemplate);
+                        faceTemplates.Add(faceTemplate);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all face templates
+                if (faceTemplates.Count > 0)
+                {
+                    context.FaceTemplates.AddRange(faceTemplates);
                 }
             }
             else if (table.ToUpper() == "BIODATA")
@@ -553,9 +615,15 @@ namespace BioTime.Api.Controllers
                             Template = parts.FirstOrDefault(p => p.StartsWith("Tmp="))?.Split('=')[1],
                             DeviceId = device.Id
                         };
-                        context.UnifiedTemplates.Add(unifiedTemplate);
+                        unifiedTemplates.Add(unifiedTemplate);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all unified templates
+                if (unifiedTemplates.Count > 0)
+                {
+                    context.UnifiedTemplates.AddRange(unifiedTemplates);
                 }
             }
             else if (table.ToUpper() == "FVEIN")
@@ -576,9 +644,15 @@ namespace BioTime.Api.Controllers
                             Template = parts.FirstOrDefault(p => p.StartsWith("Tmp="))?.Split('=')[1],
                             DeviceId = device.Id
                         };
-                        context.FingerVeinTemplates.Add(fingerVeinTemplate);
+                        fingerVeinTemplates.Add(fingerVeinTemplate);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all finger vein templates
+                if (fingerVeinTemplates.Count > 0)
+                {
+                    context.FingerVeinTemplates.AddRange(fingerVeinTemplates);
                 }
             }
             else if (table.ToUpper() == "USERPIC")
@@ -597,9 +671,15 @@ namespace BioTime.Api.Controllers
                             PhotoData = parts.FirstOrDefault(p => p.StartsWith("Content="))?.Split('=')[1],
                             DeviceId = device.Id
                         };
-                        context.UserPhotos.Add(userPhoto);
+                        userPhotos.Add(userPhoto);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all user photos
+                if (userPhotos.Count > 0)
+                {
+                    context.UserPhotos.AddRange(userPhotos);
                 }
             }
             else if (table.ToUpper() == "BIOPHOTO")
@@ -619,9 +699,15 @@ namespace BioTime.Api.Controllers
                             PhotoData = parts.FirstOrDefault(p => p.StartsWith("Content="))?.Split('=')[1],
                             DeviceId = device.Id
                         };
-                        context.ComparisonPhotos.Add(comparisonPhoto);
+                        comparisonPhotos.Add(comparisonPhoto);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all comparison photos
+                if (comparisonPhotos.Count > 0)
+                {
+                    context.ComparisonPhotos.AddRange(comparisonPhotos);
                 }
             }
             else if (table.ToUpper() == "ERRORLOG")
@@ -641,22 +727,104 @@ namespace BioTime.Api.Controllers
                             Additional = parts.FirstOrDefault(p => p.StartsWith("Additional="))?.Split('=')[1],
                             DeviceId = device.Id
                         };
-                        context.ErrorLogs.Add(errorLog);
+                        errorLogs.Add(errorLog);
                         recordsProcessed++;
                     }
+                }
+                
+                // Bulk insert all error logs
+                if (errorLogs.Count > 0)
+                {
+                    context.ErrorLogs.AddRange(errorLogs);
                 }
             }
             else if (table.ToUpper() == "FINGERTMP")
             {
+                var fingerprintTemplates = new List<FingerprintTemplate>();
+                
+                // First, collect all unique PINs to query users in bulk
+                var allPins = new HashSet<string>();
                 foreach (var line in lines)
                 {
-                    recordsProcessed += await ProcessFingerprintTemplate(line, context);
+                    var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var part in parts)
+                    {
+                        var kv = part.Split('=', 2);
+                        if (kv.Length == 2 && kv[0] == "PIN")
+                        {
+                            allPins.Add(kv[1]);
+                            break;
+                        }
+                    }
+                }
+                
+                // Query users in bulk
+                var users = await context.Users.Where(u => allPins.Contains(u.Pin)).ToListAsync();
+                var userLookup = users.ToDictionary(u => u.Pin);
+                
+                // Process each line and create fingerprint templates
+                foreach (var line in lines)
+                {
+                    var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    string? pin = null;
+                    int fid = -1;
+                    int size = 0;
+                    int valid = 0;
+                    string? template = null;
+
+                    foreach (var part in parts)
+                    {
+                        var kv = part.Split('=', 2);
+                        if (kv.Length == 2)
+                        {
+                            switch (kv[0])
+                            {
+                                case "PIN":
+                                    pin = kv[1];
+                                    break;
+                                case "FID":
+                                    int.TryParse(kv[1], out fid);
+                                    break;
+                                case "Size":
+                                    int.TryParse(kv[1], out size);
+                                    break;
+                                case "Valid":
+                                    int.TryParse(kv[1], out valid);
+                                    break;
+                                case "TMP":
+                                    template = kv[1];
+                                    break;
+                            }
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(pin) && !string.IsNullOrEmpty(template) && userLookup.ContainsKey(pin))
+                    {
+                        var newTemplate = new FingerprintTemplate
+                        {
+                            UserId = userLookup[pin].Id,
+                            FingerIndex = fid,
+                            Size = size,
+                            Valid = valid,
+                            Template = template
+                        };
+                        fingerprintTemplates.Add(newTemplate);
+                        recordsProcessed++;
+                    }
+                }
+                
+                // Bulk insert all fingerprint templates
+                if (fingerprintTemplates.Count > 0)
+                {
+                    context.FingerprintTemplates.AddRange(fingerprintTemplates);
                 }
             }
 
             return recordsProcessed;
         }
 
+        // This method is kept for potential reuse, but for bulk operations, 
+        // see the updated FINGERTMP handling in ProcessDataRecords method which is more efficient
         private async Task<int> ProcessFingerprintTemplate(string line, BioTimeDbContext context)
         {
             var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
