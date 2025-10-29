@@ -98,7 +98,21 @@ const Dashboard = () => {
         setRecentActivities(activitiesResponse.data);
 
       } catch (err) {
-        setError('Failed to fetch dashboard data: ' + err.message);
+        let errorMessage = 'Failed to fetch dashboard data';
+        if (err.response && err.response.data) {
+          if (typeof err.response.data === 'string') {
+            errorMessage = errorMessage + ': ' + err.response.data;
+          } else if (err.response.data.message) {
+            errorMessage = errorMessage + ': ' + err.response.data.message;
+          } else if (err.response.data.error) {
+            errorMessage = errorMessage + ': ' + err.response.data.error;
+          } else {
+            errorMessage = errorMessage + ': ' + err.response.data.toString();
+          }
+        } else if (err.message) {
+          errorMessage = errorMessage + ': ' + err.message;
+        }
+        setError(errorMessage);
         console.error('Dashboard data fetch error:', err);
       } finally {
         setIsLoading(false);

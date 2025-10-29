@@ -87,6 +87,23 @@ export const getUserUnifiedTemplates = (pin) => apiClient.get(`/api/users/${pin}
 export const getUserAttendanceReport = (pin, startDate, endDate) => apiClient.get(`/api/users/${pin}/attendance-report`, { params: { startDate, endDate } });
 export const deleteUser = (pin) => apiClient.delete(`/api/users/${pin}`);
 
+// Biometric Template APIs
+export const createUserFingerprint = (pin, fingerprintData) => apiClient.post(`/api/users/${pin}/fingerprints`, fingerprintData);
+export const updateUserFingerprint = (id, fingerprintData) => apiClient.put(`/api/users/fingerprints/${id}`, fingerprintData);
+export const deleteUserFingerprint = (id) => apiClient.delete(`/api/users/fingerprints/${id}`);
+
+export const createFaceTemplate = (pin, faceTemplateData) => apiClient.post(`/api/users/${pin}/facetemplates`, faceTemplateData);
+export const updateFaceTemplate = (id, faceTemplateData) => apiClient.put(`/api/users/facetemplates/${id}`, faceTemplateData);
+export const deleteFaceTemplate = (id) => apiClient.delete(`/api/users/facetemplates/${id}`);
+
+export const createFingerVeinTemplate = (pin, fingerVeinTemplateData) => apiClient.post(`/api/users/${pin}/fingerveintemplates`, fingerVeinTemplateData);
+export const updateFingerVeinTemplate = (id, fingerVeinTemplateData) => apiClient.put(`/api/users/fingerveintemplates/${id}`, fingerVeinTemplateData);
+export const deleteFingerVeinTemplate = (id) => apiClient.delete(`/api/users/fingerveintemplates/${id}`);
+
+export const createUnifiedTemplate = (pin, unifiedTemplateData) => apiClient.post(`/api/users/${pin}/unifiedtemplates`, unifiedTemplateData);
+export const updateUnifiedTemplate = (id, unifiedTemplateData) => apiClient.put(`/api/users/unifiedtemplates/${id}`, unifiedTemplateData);
+export const deleteUnifiedTemplate = (id) => apiClient.delete(`/api/users/unifiedtemplates/${id}`);
+
 export const getDevices = () => apiClient.get('/api/devices');
 export const createDevice = (device) => apiClient.post('/api/devices', device);
 export const updateDevice = (serialNumber, device) => apiClient.put(`/api/devices/${serialNumber}`, device);

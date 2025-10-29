@@ -366,6 +366,450 @@ namespace BioTime.Api.Controllers
             return Ok(unifiedTemplates);
         }
 
+        [HttpPost("{pin}/fingerprints")]
+        public async Task<ActionResult<FingerprintTemplate>> CreateUserFingerprint(string pin, [FromBody] FingerprintTemplateCreateDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var fingerprintTemplate = new FingerprintTemplate
+            {
+                UserId = user.Id,
+                FingerIndex = dto.FingerIndex,
+                Size = dto.Size,
+                Valid = dto.Valid,
+                Template = dto.Template
+            };
+
+            _context.FingerprintTemplates.Add(fingerprintTemplate);
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA WRITE FINGERTMP PIN={pin}\tFID={fingerprintTemplate.FingerIndex}\tSize={fingerprintTemplate.Size}\tValid={fingerprintTemplate.Valid}\tTMP={fingerprintTemplate.Template}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return CreatedAtAction(nameof(GetUserFingerprints), new { pin = pin }, fingerprintTemplate);
+        }
+
+        [HttpPost("{pin}/facetemplates")]
+        public async Task<ActionResult<FaceTemplate>> CreateFaceTemplate(string pin, [FromBody] FaceTemplateCreateDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var faceTemplate = new FaceTemplate
+            {
+                Pin = pin,
+                FID = dto.FID,
+                Size = dto.Size,
+                Valid = dto.Valid,
+                Template = dto.Template
+            };
+
+            _context.FaceTemplates.Add(faceTemplate);
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA WRITE FACE PIN={pin}\tFID={faceTemplate.FID}\tSize={faceTemplate.Size}\tValid={faceTemplate.Valid}\tTMP={faceTemplate.Template}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return CreatedAtAction(nameof(GetUserFaceTemplates), new { pin = pin }, faceTemplate);
+        }
+
+        [HttpPost("{pin}/fingerveintemplates")]
+        public async Task<ActionResult<FingerVeinTemplate>> CreateFingerVeinTemplate(string pin, [FromBody] FingerVeinTemplateCreateDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var fingerVeinTemplate = new FingerVeinTemplate
+            {
+                Pin = pin,
+                FID = dto.FID,
+                Index = dto.Index,
+                Size = dto.Size,
+                Valid = dto.Valid,
+                Template = dto.Template
+            };
+
+            _context.FingerVeinTemplates.Add(fingerVeinTemplate);
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA WRITE FVEIN PIN={pin}\tFID={fingerVeinTemplate.FID}\tIndex={fingerVeinTemplate.Index}\tSize={fingerVeinTemplate.Size}\tValid={fingerVeinTemplate.Valid}\tTmp={fingerVeinTemplate.Template}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return CreatedAtAction(nameof(GetUserFingerVeinTemplates), new { pin = pin }, fingerVeinTemplate);
+        }
+
+        [HttpPost("{pin}/unifiedtemplates")]
+        public async Task<ActionResult<UnifiedTemplate>> CreateUnifiedTemplate(string pin, [FromBody] UnifiedTemplateCreateDto dto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var unifiedTemplate = new UnifiedTemplate
+            {
+                Pin = pin,
+                No = dto.No,
+                Index = dto.Index,
+                Valid = dto.Valid,
+                Duress = dto.Duress,
+                Type = dto.Type,
+                MajorVer = dto.MajorVer,
+                MinorVer = dto.MinorVer,
+                Format = dto.Format,
+                Template = dto.Template
+            };
+
+            _context.UnifiedTemplates.Add(unifiedTemplate);
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA WRITE BIODATA Pin={pin}\tNo={unifiedTemplate.No}\tIndex={unifiedTemplate.Index}\tValid={unifiedTemplate.Valid}\tDuress={unifiedTemplate.Duress}\tType={unifiedTemplate.Type}\tMajorVer={unifiedTemplate.MajorVer}\tMinorVer={unifiedTemplate.MinorVer}\tFormat={unifiedTemplate.Format}\tTmp={unifiedTemplate.Template}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return CreatedAtAction(nameof(GetUserUnifiedTemplates), new { pin = pin }, unifiedTemplate);
+        }
+
+        [HttpPut("fingerprints/{id}")]
+        public async Task<ActionResult<FingerprintTemplate>> UpdateUserFingerprint(int id, [FromBody] FingerprintTemplateUpdateDto dto)
+        {
+            var fingerprintTemplate = await _context.FingerprintTemplates.FindAsync(id);
+            if (fingerprintTemplate == null)
+            {
+                return NotFound("Fingerprint template not found.");
+            }
+
+            // Get the user associated with this fingerprint template
+            var user = await _context.Users.FindAsync(fingerprintTemplate.UserId);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            fingerprintTemplate.FingerIndex = dto.FingerIndex;
+            fingerprintTemplate.Size = dto.Size;
+            fingerprintTemplate.Valid = dto.Valid;
+            fingerprintTemplate.Template = dto.Template;
+
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={fingerprintTemplate.FingerIndex}\tSize={fingerprintTemplate.Size}\tValid={fingerprintTemplate.Valid}\tTMP={fingerprintTemplate.Template}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(fingerprintTemplate);
+        }
+
+        [HttpPut("facetemplates/{id}")]
+        public async Task<ActionResult<FaceTemplate>> UpdateFaceTemplate(int id, [FromBody] FaceTemplateUpdateDto dto)
+        {
+            var faceTemplate = await _context.FaceTemplates.FindAsync(id);
+            if (faceTemplate == null)
+            {
+                return NotFound("Face template not found.");
+            }
+
+            // Get the user associated with this face template
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == faceTemplate.Pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            faceTemplate.FID = dto.FID;
+            faceTemplate.Size = dto.Size;
+            faceTemplate.Valid = dto.Valid;
+            faceTemplate.Template = dto.Template;
+
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA UPDATE FACE PIN={user.Pin}\tFID={faceTemplate.FID}\tSize={faceTemplate.Size}\tValid={faceTemplate.Valid}\tTMP={faceTemplate.Template}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(faceTemplate);
+        }
+
+        [HttpPut("fingerveintemplates/{id}")]
+        public async Task<ActionResult<FingerVeinTemplate>> UpdateFingerVeinTemplate(int id, [FromBody] FingerVeinTemplateUpdateDto dto)
+        {
+            var fingerVeinTemplate = await _context.FingerVeinTemplates.FindAsync(id);
+            if (fingerVeinTemplate == null)
+            {
+                return NotFound("Finger vein template not found.");
+            }
+
+            // Get the user associated with this finger vein template
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == fingerVeinTemplate.Pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            fingerVeinTemplate.FID = dto.FID;
+            fingerVeinTemplate.Index = dto.Index;
+            fingerVeinTemplate.Size = dto.Size;
+            fingerVeinTemplate.Valid = dto.Valid;
+            fingerVeinTemplate.Template = dto.Template;
+
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA UPDATE FVEIN PIN={user.Pin}\tFID={fingerVeinTemplate.FID}\tIndex={fingerVeinTemplate.Index}\tSize={fingerVeinTemplate.Size}\tValid={fingerVeinTemplate.Valid}\tTmp={fingerVeinTemplate.Template}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(fingerVeinTemplate);
+        }
+
+        [HttpPut("unifiedtemplates/{id}")]
+        public async Task<ActionResult<UnifiedTemplate>> UpdateUnifiedTemplate(int id, [FromBody] UnifiedTemplateUpdateDto dto)
+        {
+            var unifiedTemplate = await _context.UnifiedTemplates.FindAsync(id);
+            if (unifiedTemplate == null)
+            {
+                return NotFound("Unified template not found.");
+            }
+
+            // Get the user associated with this unified template
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == unifiedTemplate.Pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            unifiedTemplate.No = dto.No;
+            unifiedTemplate.Index = dto.Index;
+            unifiedTemplate.Valid = dto.Valid;
+            unifiedTemplate.Duress = dto.Duress;
+            unifiedTemplate.Type = dto.Type;
+            unifiedTemplate.MajorVer = dto.MajorVer;
+            unifiedTemplate.MinorVer = dto.MinorVer;
+            unifiedTemplate.Format = dto.Format;
+            unifiedTemplate.Template = dto.Template;
+
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA UPDATE BIODATA Pin={user.Pin}\tNo={unifiedTemplate.No}\tIndex={unifiedTemplate.Index}\tValid={unifiedTemplate.Valid}\tDuress={unifiedTemplate.Duress}\tType={unifiedTemplate.Type}\tMajorVer={unifiedTemplate.MajorVer}\tMinorVer={unifiedTemplate.MinorVer}\tFormat={unifiedTemplate.Format}\tTmp={unifiedTemplate.Template}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(unifiedTemplate);
+        }
+
         [HttpGet("{pin}/attendance-report")]
         public async Task<ActionResult<AttendanceReportResponseDto>> GetUserAttendanceReport(string pin, [FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
         {
@@ -442,6 +886,210 @@ namespace BioTime.Api.Controllers
                 TotalLateEntries = totalLateEntries,
                 TotalEarlyLeaves = totalEarlyLeaves
             });
+        }
+
+        [HttpDelete("fingerprints/{id}")]
+        public async Task<ActionResult> DeleteUserFingerprint(int id)
+        {
+            var fingerprintTemplate = await _context.FingerprintTemplates.FindAsync(id);
+            if (fingerprintTemplate == null)
+            {
+                return NotFound("Fingerprint template not found.");
+            }
+
+            // Get the user associated with this fingerprint template
+            var user = await _context.Users.FindAsync(fingerprintTemplate.UserId);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            _context.FingerprintTemplates.Remove(fingerprintTemplate);
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA DELETE FINGERTMP PIN={user.Pin}\tFID={fingerprintTemplate.FingerIndex}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok($"Fingerprint template with ID {id} has been deleted and removal commands have been queued for {devicesToUpdate.Count} device(s).");
+        }
+
+        [HttpDelete("facetemplates/{id}")]
+        public async Task<ActionResult> DeleteFaceTemplate(int id)
+        {
+            var faceTemplate = await _context.FaceTemplates.FindAsync(id);
+            if (faceTemplate == null)
+            {
+                return NotFound("Face template not found.");
+            }
+
+            // Get the user associated with this face template
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == faceTemplate.Pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            _context.FaceTemplates.Remove(faceTemplate);
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA DELETE FACE PIN={user.Pin}\tFID={faceTemplate.FID}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok($"Face template with ID {id} has been deleted and removal commands have been queued for {devicesToUpdate.Count} device(s).");
+        }
+
+        [HttpDelete("fingerveintemplates/{id}")]
+        public async Task<ActionResult> DeleteFingerVeinTemplate(int id)
+        {
+            var fingerVeinTemplate = await _context.FingerVeinTemplates.FindAsync(id);
+            if (fingerVeinTemplate == null)
+            {
+                return NotFound("Finger vein template not found.");
+            }
+
+            // Get the user associated with this finger vein template
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == fingerVeinTemplate.Pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            _context.FingerVeinTemplates.Remove(fingerVeinTemplate);
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA DELETE FVEIN PIN={user.Pin}\tFID={fingerVeinTemplate.FID}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok($"Finger vein template with ID {id} has been deleted and removal commands have been queued for {devicesToUpdate.Count} device(s).");
+        }
+
+        [HttpDelete("unifiedtemplates/{id}")]
+        public async Task<ActionResult> DeleteUnifiedTemplate(int id)
+        {
+            var unifiedTemplate = await _context.UnifiedTemplates.FindAsync(id);
+            if (unifiedTemplate == null)
+            {
+                return NotFound("Unified template not found.");
+            }
+
+            // Get the user associated with this unified template
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == unifiedTemplate.Pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            _context.UnifiedTemplates.Remove(unifiedTemplate);
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                string commandText = $"C:{commandIdCounter++}:DATA DELETE BIODATA Pin={user.Pin}\tNo={unifiedTemplate.No}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = commandText
+                });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok($"Unified template with ID {id} has been deleted and removal commands have been queued for {devicesToUpdate.Count} device(s).");
         }
     }
 }
