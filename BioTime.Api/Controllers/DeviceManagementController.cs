@@ -24,7 +24,9 @@ namespace BioTime.Api.Controllers
         [HttpPut("{serialNumber}/area")]
         public async Task<IActionResult> AssignDeviceToArea(string serialNumber, [FromBody] DeviceAreaDto dto)
         {
-            var device = await _context.Devices.FirstOrDefaultAsync(d => d.SerialNumber == serialNumber);
+            var device = await _context.Devices
+                .Include(d => d.Area) // Include the current area to see what it was before
+                .FirstOrDefaultAsync(d => d.SerialNumber == serialNumber);
             if (device == null)
             {
                 return NotFound("Device not found.");
@@ -41,9 +43,189 @@ namespace BioTime.Api.Controllers
                 return NotFound("Area not found.");
             }
 
+            // Get users who had access to the device via the old area
+            var previousUserIds = new List<int>();
+            if (device.AreaId.HasValue)
+            {
+                previousUserIds = await _context.UserAreas
+                    .Where(ua => ua.AreaId == device.AreaId)
+                    .Select(ua => ua.UserId)
+                    .ToListAsync();
+            }
+
+            // Get users who will have access to the device via the new area
+            var newUserIds = await _context.UserAreas
+                .Where(ua => ua.AreaId == dto.AreaId)
+                .Select(ua => ua.UserId)
+                .ToListAsync();
+
+            // Users to remove (had access before but don't have access after)
+            var usersToRemove = previousUserIds.Except(newUserIds).ToList();
+            
+            // Users to add (don't have access before but will have access after)
+            var usersToAdd = newUserIds.Except(previousUserIds).ToList();
+
+            // Update the device's area
             device.AreaId = dto.AreaId;
             await _context.SaveChangesAsync();
-            return Ok();
+
+            // Create commands for users to be removed
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            // Add commands to remove users who lost access
+            foreach (var userId in usersToRemove)
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    string commandText = $"C:{commandIdCounter++}:DATA DELETE USERINFO PIN={user.Pin}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = serialNumber,
+                        CommandText = commandText
+                    });
+
+                    // Also remove biometric templates for this user
+                    // Fingerprint templates
+                    var fingerprintTemplates = await _context.FingerprintTemplates
+                        .Where(ft => ft.UserId == userId)
+                        .ToListAsync();
+                    foreach (var template in fingerprintTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA DELETE FINGERTMP PIN={user.Pin}\tFID={template.FingerIndex}";
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = serialNumber,
+                            CommandText = commandText
+                        });
+                    }
+
+                    // Face templates
+                    var faceTemplates = await _context.FaceTemplates
+                        .Where(ft => ft.Pin == user.Pin)
+                        .ToListAsync();
+                    foreach (var template in faceTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA DELETE FACE PIN={user.Pin}\tFID={template.FID}";
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = serialNumber,
+                            CommandText = commandText
+                        });
+                    }
+
+                    // Finger Vein templates
+                    var fingerVeinTemplates = await _context.FingerVeinTemplates
+                        .Where(fvt => fvt.Pin == user.Pin)
+                        .ToListAsync();
+                    foreach (var template in fingerVeinTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA DELETE FVEIN PIN={user.Pin}\tFID={template.FID}";
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = serialNumber,
+                            CommandText = commandText
+                        });
+                    }
+
+                    // Unified templates
+                    var unifiedTemplates = await _context.UnifiedTemplates
+                        .Where(ut => ut.Pin == user.Pin)
+                        .ToListAsync();
+                    foreach (var template in unifiedTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA DELETE BIODATA Pin={user.Pin}\tNo={template.No}";
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = serialNumber,
+                            CommandText = commandText
+                        });
+                    }
+                }
+            }
+
+            // Add commands to add users who gained access
+            foreach (var userId in usersToAdd)
+            {
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null)
+                {
+                    // Add user info
+                    string commandText = $"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = serialNumber,
+                        CommandText = commandText
+                    });
+
+                    // Add fingerprint templates
+                    var fingerprintTemplates = await _context.FingerprintTemplates
+                        .Where(ft => ft.UserId == userId)
+                        .ToListAsync();
+                    foreach (var template in fingerprintTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={template.FingerIndex}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = serialNumber,
+                            CommandText = commandText
+                        });
+                    }
+
+                    // Add face templates
+                    var faceTemplates = await _context.FaceTemplates
+                        .Where(ft => ft.Pin == user.Pin)
+                        .ToListAsync();
+                    foreach (var template in faceTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA UPDATE FACE PIN={user.Pin}\tFID={template.FID}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = serialNumber,
+                            CommandText = commandText
+                        });
+                    }
+
+                    // Add finger vein templates
+                    var fingerVeinTemplates = await _context.FingerVeinTemplates
+                        .Where(fvt => fvt.Pin == user.Pin)
+                        .ToListAsync();
+                    foreach (var template in fingerVeinTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA UPDATE FVEIN PIN={user.Pin}\tFID={template.FID}\tIndex={template.Index}\tSize={template.Size}\tValid={template.Valid}\tTmp={template.Template}";
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = serialNumber,
+                            CommandText = commandText
+                        });
+                    }
+
+                    // Add unified templates
+                    var unifiedTemplates = await _context.UnifiedTemplates
+                        .Where(ut => ut.Pin == user.Pin)
+                        .ToListAsync();
+                    foreach (var template in unifiedTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA UPDATE BIODATA Pin={user.Pin}\tNo={template.No}\tIndex={template.Index}\tValid={template.Valid}\tDuress={template.Duress}\tType={template.Type}\tMajorVer={template.MajorVer}\tMinorVer={template.MinorVer}\tFormat={template.Format}\tTmp={template.Template}";
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = serialNumber,
+                            CommandText = commandText
+                        });
+                    }
+                }
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+                
+                return Ok($"Device area updated. Queued {commands.Count} commands to sync user access for {usersToAdd.Count} new users and remove access for {usersToRemove.Count} users.");
+            }
+
+            return Ok("Device area updated. No user access changes required.");
         }
 
         [HttpPost("{serialNumber}/sync-users")]
