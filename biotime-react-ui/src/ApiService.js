@@ -2,20 +2,73 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-    // Don't specify baseURL when using proxy - it will be handled by the proxy
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Add an interceptor to handle errors globally
-apiClient.interceptors.response.use(
-    (response) => response,
+// Request Interceptor: Attach Authorization header
+apiClient.interceptors.request.use(
+    (config) => {
+        const accessToken = localStorage.getItem('accessToken');
+        if (accessToken && !config.url.includes('/api/auth')) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        return config;
+    },
     (error) => {
-        console.error('API Error:', error);
         return Promise.reject(error);
     }
 );
+
+// Response Interceptor: Handle 401 Unauthorized errors
+apiClient.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+        // If the error is 401 and it's not a login/register request, try to refresh token
+        if (error.response.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/api/auth')) {
+            originalRequest._retry = true;
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (refreshToken) {
+                try {
+                    const response = await axios.post('/api/auth/refresh', { refreshToken });
+                    const { accessToken, newRefreshToken } = response.data;
+                    localStorage.setItem('accessToken', accessToken);
+                    localStorage.setItem('refreshToken', newRefreshToken);
+                    apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+                    return apiClient(originalRequest);
+                } catch (refreshError) {
+                    // Refresh token failed, clear tokens and redirect to login
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    window.location.href = '/login'; // Redirect to login page
+                    return Promise.reject(refreshError);
+                }
+            } else {
+                // No refresh token, redirect to login
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                window.location.href = '/login'; // Redirect to login page
+            }
+        } else if (error.response.status === 401 && (originalRequest.url.includes('/api/auth/login') || originalRequest.url.includes('/api/auth/register'))) {
+            // If 401 on login/register, just reject the promise so the component can handle it
+            return Promise.reject(error.response.data);
+        }
+        return Promise.reject(error);
+    }
+);
+
+// Authentication functions
+export const login = async (username, password) => {
+    const response = await apiClient.post('/api/auth/login', { username, password });
+    return response.data;
+};
+
+export const register = async (username, password) => {
+    const response = await apiClient.post('/api/auth/register', { username, password });
+    return response.data;
+};
 
 export const getAreas = () => apiClient.get('/api/areas');
 export const createArea = (area) => apiClient.post('/api/areas', area);
@@ -74,4 +127,3 @@ export const getRecentOperationLogs = (count = 10, deviceSerialNumber = null) =>
     return apiClient.get(url);
 };
 
-export default apiClient;

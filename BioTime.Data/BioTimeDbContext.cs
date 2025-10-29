@@ -28,6 +28,7 @@ namespace BioTime.Data
         public DbSet<ErrorLog> ErrorLogs { get; set; }
         public DbSet<DataPacket> DataPackets { get; set; }
         public DbSet<DeviceOption> DeviceOptions { get; set; }
+        public DbSet<AdministrativeUser> AdministrativeUsers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

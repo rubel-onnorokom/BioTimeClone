@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Container, Navbar, Nav, NavDropdown, Spinner, Alert, ListGroup } from 'react-bootstrap';
 import { FaFingerprint, FaUsers, FaMicrochip, FaTools, FaHome, FaCog, FaChartBar } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -11,7 +11,10 @@ import DevicePage from './components/DevicePage';
 import DeviceManagementPage from './components/DeviceManagementPage';
 import OperationLogPage from './components/OperationLogPage';
 import BiometricManagementPage from './components/BiometricManagementPage';
-import AttendanceReportPage from './components/AttendanceReportPage'; // New import
+import AttendanceReportPage from './components/AttendanceReportPage';
+import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import PrivateRoute from './components/PrivateRoute';
 import { getUserCount, getDeviceCount, getAreaCount, getRecentOperationLogs } from './ApiService';
 
 // Sidebar component for better navigation
@@ -219,44 +222,66 @@ const Dashboard = () => {
 };
 
 function App() {
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('accessToken'));
+
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    setIsAuthenticated(false);
+    navigate('/login');
+  };
+
   return (
-    <Router>
       <div className="app-container">
-        <Sidebar />
+        {isAuthenticated && <Sidebar />}
         <div className="main-content">
-          <Navbar bg="light" expand="lg" className="mb-4">
-            <Container>
-              <Navbar.Brand href="#home">BioTime Admin</Navbar.Brand>
-              <Navbar.Toggle aria-controls="basic-navbar-nav" />
-              <Navbar.Collapse id="basic-navbar-nav">
-                <Nav className="me-auto">
-                  <NavDropdown title="Settings" id="basic-nav-dropdown">
-                    <NavDropdown.Item href="#action/3.1">System Settings</NavDropdown.Item>
-                    <NavDropdown.Item href="#action/3.2">User Preferences</NavDropdown.Item>
-                    <NavDropdown.Divider />
-                    <NavDropdown.Item href="#action/3.3">Logout</NavDropdown.Item>
-                  </NavDropdown>
-                </Nav>
-              </Navbar.Collapse>
-            </Container>
-          </Navbar>
+          {isAuthenticated && (
+            <Navbar bg="light" expand="lg" className="mb-4">
+              <Container>
+                <Navbar.Brand href="#home">BioTime Admin</Navbar.Brand>
+                <Navbar.Toggle aria-controls="basic-navbar-nav" />
+                <Navbar.Collapse id="basic-navbar-nav">
+                  <Nav className="me-auto">
+                    <NavDropdown title="Settings" id="basic-nav-dropdown">
+                      <NavDropdown.Item href="#action/3.1">System Settings</NavDropdown.Item>
+                      <NavDropdown.Item href="#action/3.2">User Preferences</NavDropdown.Item>
+                      <NavDropdown.Divider />
+                      <NavDropdown.Item onClick={handleLogout}>Logout</NavDropdown.Item>
+                    </NavDropdown>
+                  </Nav>
+                </Navbar.Collapse>
+              </Container>
+            </Navbar>
+          )}
           
           <Container fluid>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/areas" element={<AreaPage />} />
-              <Route path="/users" element={<UserPage />} />
-              <Route path="/biometric-management/:pin" element={<BiometricManagementPage />} />
-              <Route path="/attendance-report" element={<AttendanceReportPage />} /> {/* New route */}
-              <Route path="/devices" element={<DevicePage />} />
-              <Route path="/device-management" element={<DeviceManagementPage />} />
-              <Route path="/operation-logs" element={<OperationLogPage />} />
+              <Route path="/login" element={<LoginPage setIsAuthenticated={setIsAuthenticated} />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route element={<PrivateRoute />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/areas" element={<AreaPage />} />
+                <Route path="/users" element={<UserPage />} />
+                <Route path="/biometric-management/:pin" element={<BiometricManagementPage />} />
+                <Route path="/attendance-report" element={<AttendanceReportPage />} />
+                <Route path="/devices" element={<DevicePage />} />
+                <Route path="/device-management" element={<DeviceManagementPage />} />
+                <Route path="/operation-logs" element={<OperationLogPage />} />
+              </Route>
             </Routes>
           </Container>
         </div>
       </div>
-    </Router>
   );
 }
 
-export default App;
+function AppWrapper() {
+  return (
+    <Router>
+      <App />
+    </Router>
+  )
+}
+
+export default AppWrapper;

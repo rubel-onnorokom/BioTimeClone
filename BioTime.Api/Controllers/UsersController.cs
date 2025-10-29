@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System;
 using System.Globalization;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BioTime.Api.Controllers
 {
@@ -20,6 +21,25 @@ namespace BioTime.Api.Controllers
         public UsersController(BioTimeDbContext context)
         {
             _context = context;
+        }
+
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetMe()
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var user = await _context.AdministrativeUsers.FindAsync(int.Parse(userId));
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new AdminUserDto { Id = user.Id, Username = user.Username });
         }
 
         [HttpPost]
