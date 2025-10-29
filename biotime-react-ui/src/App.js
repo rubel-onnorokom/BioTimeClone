@@ -14,6 +14,9 @@ import BiometricManagementPage from './components/BiometricManagementPage';
 import AttendanceReportPage from './components/AttendanceReportPage';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
+import ProfilePage from './components/ProfilePage';
+import ForgotPasswordPage from './components/ForgotPasswordPage';
+import ResetPasswordPage from './components/ResetPasswordPage';
 import PrivateRoute from './components/PrivateRoute';
 import { getUserCount, getDeviceCount, getAreaCount, getRecentOperationLogs } from './ApiService';
 
@@ -224,11 +227,20 @@ const Dashboard = () => {
 function App() {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('accessToken'));
+  const [username, setUsername] = useState(localStorage.getItem('username') || '');
+
+  const handleLoginSuccess = (loggedInUsername) => {
+    setIsAuthenticated(true);
+    setUsername(loggedInUsername);
+    localStorage.setItem('username', loggedInUsername);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('username');
     setIsAuthenticated(false);
+    setUsername('');
     navigate('/login');
   };
 
@@ -243,9 +255,8 @@ function App() {
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
                   <Nav className="me-auto">
-                    <NavDropdown title="Settings" id="basic-nav-dropdown">
-                      <NavDropdown.Item href="#action/3.1">System Settings</NavDropdown.Item>
-                      <NavDropdown.Item href="#action/3.2">User Preferences</NavDropdown.Item>
+                    <NavDropdown title={`Welcome, ${username}`} id="basic-nav-dropdown">
+                      <NavDropdown.Item as={Link} to="/profile">Profile</NavDropdown.Item>
                       <NavDropdown.Divider />
                       <NavDropdown.Item onClick={handleLogout}>Logout</NavDropdown.Item>
                     </NavDropdown>
@@ -257,8 +268,10 @@ function App() {
           
           <Container fluid>
             <Routes>
-              <Route path="/login" element={<LoginPage setIsAuthenticated={setIsAuthenticated} />} />
-              <Route path="/register" element={<RegisterPage setIsAuthenticated={setIsAuthenticated} />} />
+              <Route path="/login" element={<LoginPage setIsAuthenticated={handleLoginSuccess} />} />
+              <Route path="/register" element={<RegisterPage setIsAuthenticated={handleLoginSuccess} />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route element={<PrivateRoute />}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/areas" element={<AreaPage />} />
@@ -268,6 +281,7 @@ function App() {
                 <Route path="/devices" element={<DevicePage />} />
                 <Route path="/device-management" element={<DeviceManagementPage />} />
                 <Route path="/operation-logs" element={<OperationLogPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
               </Route>
             </Routes>
           </Container>

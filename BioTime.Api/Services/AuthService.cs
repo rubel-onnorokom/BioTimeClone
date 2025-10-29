@@ -60,8 +60,74 @@ namespace BioTime.Api.Services
             return new TokenDto
             {
                 AccessToken = accessToken,
-                RefreshToken = refreshToken
+                RefreshToken = refreshToken,
+                Username = user.Username
             };
+        }
+
+        public async Task<AdministrativeUser> GetUserById(int id)
+        {
+            return await _context.AdministrativeUsers.FindAsync(id);
+        }
+
+        public async Task UpdateUser(AdministrativeUser user)
+        {
+            _context.AdministrativeUsers.Update(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task ChangePassword(AdministrativeUser user, string newPassword)
+        {
+            _passwordService.CreatePasswordHash(newPassword, out byte[] passwordHash, out byte[] passwordSalt);
+            user.PasswordHash = passwordHash;
+            user.PasswordSalt = passwordSalt;
+            _context.AdministrativeUsers.Update(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<string?> GeneratePasswordResetToken(string username)
+        {
+            var user = await GetUserByUsername(username);
+            if (user == null) return null; // User not found
+
+            var generatedPassword = GenerateRandomPassword();
+            _passwordService.CreatePasswordHash(generatedPassword, out byte[] passwordHash, out byte[] passwordSalt);
+            user.PasswordHash = passwordHash;
+            user.PasswordSalt = passwordSalt;
+            // No need for PasswordResetToken or Expiry in this flow
+            await _context.SaveChangesAsync();
+
+            return generatedPassword;
+        }
+
+        public async Task<string?> ResetPassword(string token)
+        {
+            var user = await _context.AdministrativeUsers.FirstOrDefaultAsync(u => u.PasswordResetToken == token && u.PasswordResetTokenExpiry > System.DateTime.UtcNow);
+            if (user == null) return null; // Invalid or expired token
+
+            var generatedPassword = GenerateRandomPassword();
+            _passwordService.CreatePasswordHash(generatedPassword, out byte[] passwordHash, out byte[] passwordSalt);
+            user.PasswordHash = passwordHash;
+            user.PasswordSalt = passwordSalt;
+            user.PasswordResetToken = null; // Clear token after use
+            user.PasswordResetTokenExpiry = null;
+            await _context.SaveChangesAsync();
+
+            return generatedPassword;
+        }
+
+        private string GenerateRandomPassword()
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+            var random = new System.Random();
+            var password = new char[12]; // Generate a 12-character password
+
+            for (int i = 0; i < password.Length; i++)
+            {
+                password[i] = chars[random.Next(chars.Length)];
+            }
+
+            return new string(password);
         }
     }
 }

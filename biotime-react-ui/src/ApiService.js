@@ -11,7 +11,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
     (config) => {
         const accessToken = localStorage.getItem('accessToken');
-        if (accessToken && !config.url.includes('/api/auth')) {
+        if (accessToken && !config.url.includes('/api/auth/login') && !config.url.includes('/api/auth/register')) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
         return config;
@@ -127,3 +127,28 @@ export const getRecentOperationLogs = (count = 10, deviceSerialNumber = null) =>
     return apiClient.get(url);
 };
 
+// Profile Management functions
+export const getProfile = async () => {
+    const response = await apiClient.get('/api/auth/profile');
+    return response.data;
+};
+
+export const updateProfile = async (newUsername) => {
+    const response = await apiClient.put('/api/auth/profile', { username: newUsername });
+    return response.data;
+};
+
+export const changePassword = async (currentPassword, newPassword) => {
+    const response = await apiClient.post('/api/auth/change-password', { currentPassword, newPassword });
+    return response.data;
+};
+
+// Password Reset functions
+export const forgotPassword = async (username) => {
+    const response = await apiClient.post('/api/auth/forgot-password', { username });
+    return response.data;
+};
+export const resetPassword = async (token) => {
+    const response = await apiClient.post('/api/auth/reset-password', { token });
+    return response.data;
+};

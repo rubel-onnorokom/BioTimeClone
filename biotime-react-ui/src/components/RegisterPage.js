@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register, login } from '../ApiService';
-import { Card, Form, Button, Alert } from 'react-bootstrap';
+import { Card, Form, Button, Alert, InputGroup, FormControl } from 'react-bootstrap';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const RegisterPage = ({ setIsAuthenticated }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
     const handleRegister = async (e) => {
@@ -14,10 +16,11 @@ const RegisterPage = ({ setIsAuthenticated }) => {
         try {
             await register(username, password);
             // Automatically log in after successful registration
-            const { accessToken, refreshToken } = await login(username, password);
+            const { accessToken, refreshToken, username: loggedInUsername } = await login(username, password);
             localStorage.setItem('accessToken', accessToken);
             localStorage.setItem('refreshToken', refreshToken);
-            setIsAuthenticated(true);
+            localStorage.setItem('username', loggedInUsername);
+            setIsAuthenticated(loggedInUsername);
             navigate('/');
         } catch (error) {
             if (error.response && error.response.data) {
@@ -26,6 +29,10 @@ const RegisterPage = ({ setIsAuthenticated }) => {
                 setError('Registration failed');
             }
         }
+    };
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
     };
 
     return (
@@ -42,7 +49,17 @@ const RegisterPage = ({ setIsAuthenticated }) => {
 
                         <Form.Group className="mb-3" controlId="formBasicPassword">
                             <Form.Label>Password</Form.Label>
-                            <Form.Control type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                            <InputGroup>
+                                <FormControl
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                                <Button variant="outline-secondary" onClick={togglePasswordVisibility}>
+                                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                </Button>
+                            </InputGroup>
                         </Form.Group>
 
                         <Button variant="primary" type="submit" className="w-100">
