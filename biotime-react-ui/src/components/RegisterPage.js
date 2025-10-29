@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { register } from '../ApiService';
+import { register, login } from '../ApiService';
 import { Card, Form, Button, Alert } from 'react-bootstrap';
 
-const RegisterPage = () => {
+const RegisterPage = ({ setIsAuthenticated }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -13,6 +13,11 @@ const RegisterPage = () => {
         e.preventDefault();
         try {
             await register(username, password);
+            // Automatically log in after successful registration
+            const { accessToken, refreshToken } = await login(username, password);
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+            setIsAuthenticated(true);
             navigate('/');
         } catch (error) {
             if (error.response && error.response.data) {

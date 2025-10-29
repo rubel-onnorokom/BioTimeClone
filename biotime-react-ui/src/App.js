@@ -258,7 +258,7 @@ function App() {
           <Container fluid>
             <Routes>
               <Route path="/login" element={<LoginPage setIsAuthenticated={setIsAuthenticated} />} />
-              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/register" element={<RegisterPage setIsAuthenticated={setIsAuthenticated} />} />
               <Route element={<PrivateRoute />}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/areas" element={<AreaPage />} />
