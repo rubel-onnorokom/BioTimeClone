@@ -20,7 +20,8 @@ import {
     executeShellCommand,
     putFile,
     getFile,
-    getAreas
+    getAreas,
+    clearDeviceCommands
 } from '../ApiService';
 import { Card, Button, Form, Alert, Row, Col, Tab, Tabs, Accordion } from 'react-bootstrap';
 
@@ -236,6 +237,20 @@ const DeviceManagementPage = () => {
                 setMessage(response.data);
             } catch (error) {
                 setMessage(`Error clearing attendance logs: ${error.response ? error.response.data : error.message}`);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    };
+
+    const handleClearDeviceCommands = async (serialNumber) => {
+        if (window.confirm(`Are you sure you want to clear all commands for device ${serialNumber}? This will remove all queued commands for this device.`)) {
+            setIsLoading(true);
+            try {
+                const response = await clearDeviceCommands(serialNumber);
+                setMessage(response.data);
+            } catch (error) {
+                setMessage(`Error clearing device commands: ${error.response ? error.response.data : error.message}`);
             } finally {
                 setIsLoading(false);
             }

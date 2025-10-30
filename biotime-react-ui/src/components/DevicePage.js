@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDevices, createDevice, updateDevice, deleteDevice, getAreas, getPendingCommands } from '../ApiService';
+import { getDevices, createDevice, updateDevice, deleteDevice, getAreas, getPendingCommands, clearDeviceCommands, syncAllDataToDevice } from '../ApiService';
 import { Card, Button, Form, Alert, Row, Col, Badge } from 'react-bootstrap';
 import DeviceDetailsModal from './DeviceDetailsModal';
 
@@ -16,6 +16,10 @@ const DevicePage = () => {
     const [pendingCommands, setPendingCommands] = useState({});
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [selectedDevice, setSelectedDevice] = useState(null);
+    const [showClearCommandsModal, setShowClearCommandsModal] = useState(false);
+    const [deviceToDeleteCommands, setDeviceToDeleteCommands] = useState(null);
+    const [showSyncAllDataModal, setShowSyncAllDataModal] = useState(false);
+    const [deviceToSyncAllData, setDeviceToSyncAllData] = useState(null);
 
     useEffect(() => {
         fetchDevices();
@@ -138,6 +142,52 @@ const DevicePage = () => {
     const handleShowDetails = (device) => {
         setSelectedDevice(device);
         setShowDetailsModal(true);
+    };
+
+    const handleClearDeviceCommands = (serialNumber) => {
+        setDeviceToDeleteCommands(serialNumber);
+        setShowClearCommandsModal(true);
+    };
+
+    const handleConfirmClearCommands = async () => {
+        if (deviceToDeleteCommands) {
+            setIsLoading(true);
+            setShowClearCommandsModal(false);
+            try {
+                const response = await clearDeviceCommands(deviceToDeleteCommands);
+                setMessage(response.data);
+                // Refresh pending commands count after clearing
+                fetchPendingCommandsCount(deviceToDeleteCommands);
+            } catch (error) {
+                setMessage(`Error clearing device commands: ${error.response ? error.response.data : error.message}`);
+            } finally {
+                setIsLoading(false);
+                setDeviceToDeleteCommands(null);
+            }
+        }
+    };
+
+    const handleSyncAllData = (serialNumber) => {
+        setDeviceToSyncAllData(serialNumber);
+        setShowSyncAllDataModal(true);
+    };
+
+    const handleConfirmSyncAllData = async () => {
+        if (deviceToSyncAllData) {
+            setIsLoading(true);
+            setShowSyncAllDataModal(false);
+            try {
+                const response = await syncAllDataToDevice(deviceToSyncAllData);
+                setMessage(response.data);
+                // Refresh pending commands count after syncing
+                fetchPendingCommandsCount(deviceToSyncAllData);
+            } catch (error) {
+                setMessage(`Error syncing all data to device: ${error.response ? error.response.data : error.message}`);
+            } finally {
+                setIsLoading(false);
+                setDeviceToSyncAllData(null);
+            }
+        }
     };
 
     return (
@@ -296,6 +346,22 @@ const DevicePage = () => {
                                                 >
                                                     Delete
                                                 </Button>
+                                                <Button 
+                                                    variant="secondary" 
+                                                    size="sm"
+                                                    onClick={() => handleClearDeviceCommands(device.serialNumber)}
+                                                    disabled={isLoading}
+                                                >
+                                                    Clear Commands
+                                                </Button>
+                                                <Button 
+                                                    variant="primary" 
+                                                    size="sm"
+                                                    onClick={() => handleSyncAllData(device.serialNumber)}
+                                                    disabled={isLoading}
+                                                >
+                                                    Sync All Data
+                                                </Button>
                                             </div>
                                         </div>
                                     ))}
@@ -306,6 +372,55 @@ const DevicePage = () => {
                 </Col>
             </Row>
             <DeviceDetailsModal device={selectedDevice} show={showDetailsModal} onHide={() => setShowDetailsModal(false)} />
+            
+            {/* Clear Commands Confirmation Modal */}
+            <div className={`modal ${showClearCommandsModal ? 'show d-block' : ''}`} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title">Confirm Clear Commands</h5>
+                            <button type="button" className="btn-close" onClick={() => setShowClearCommandsModal(false)}></button>
+                        </div>
+                        <div className="modal-body">
+                            <p>Are you sure you want to clear all commands for device <strong>{deviceToDeleteCommands}</strong>?</p>
+                            <p className="text-warning">This will remove all queued commands for this device.</p>
+                        </div>
+                        <div className="modal-footer">
+                            <Button variant="secondary" onClick={() => setShowClearCommandsModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="danger" onClick={handleConfirmClearCommands}>
+                                Clear Commands
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {/* Sync All Data Confirmation Modal */}
+            <div className={`modal ${showSyncAllDataModal ? 'show d-block' : ''}`} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                <div className="modal-dialog modal-dialog-centered">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h5 className="modal-title">Confirm Sync All Data</h5>
+                            <button type="button" className="btn-close" onClick={() => setShowSyncAllDataModal(false)}></button>
+                        </div>
+                        <div className="modal-body">
+                            <p>Are you sure you want to sync all data for device <strong>{deviceToSyncAllData}</strong>?</p>
+                            <p className="text-info">This will sync all user information and biometric templates (fingerprints, face, finger vein, unified) from the database to the device.</p>
+                            <p className="text-warning"><strong>Note:</strong> This will queue new commands to update the device. Any previously cleared commands will not be restored.</p>
+                        </div>
+                        <div className="modal-footer">
+                            <Button variant="secondary" onClick={() => setShowSyncAllDataModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" onClick={handleConfirmSyncAllData}>
+                                Sync All Data
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

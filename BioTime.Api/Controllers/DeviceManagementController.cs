@@ -715,5 +715,129 @@ namespace BioTime.Api.Controllers
 
             return Ok(new { PendingCommands = pendingCount });
         }
+        
+        [HttpDelete("{serialNumber}/clear-commands")]
+        public async Task<IActionResult> ClearDeviceCommands(string serialNumber)
+        {
+            // Find all server commands for the device
+            var commands = await _context.ServerCommands
+                .Where(c => c.DeviceSerialNumber == serialNumber)
+                .ToListAsync();
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.RemoveRange(commands);
+                await _context.SaveChangesAsync();
+                
+                return Ok($"Successfully deleted {commands.Count} command(s) for device {serialNumber}.");
+            }
+            
+            return Ok($"No commands found for device {serialNumber}.");
+        }
+
+        [HttpPost("{serialNumber}/sync-all-data")]
+        public async Task<IActionResult> SyncAllDataToDevice(string serialNumber)
+        {
+            var device = await _context.Devices
+                .Include(d => d.Area)
+                .FirstOrDefaultAsync(d => d.SerialNumber == serialNumber);
+            if (device == null)
+            {
+                return NotFound("Device not found.");
+            }
+
+            if (device.AreaId == null)
+            {
+                return BadRequest("Device is not assigned to an area. Cannot sync data.");
+            }
+
+            // Get all users who have access to this device's area
+            var usersToSync = await _context.UserAreas
+                .Where(ua => ua.AreaId == device.AreaId)
+                .Select(ua => ua.User)
+                .ToListAsync();
+
+            if (!usersToSync.Any())
+            {
+                return Ok("No users found for this device's area.");
+            }
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var user in usersToSync)
+            {
+                if (user == null) continue;
+
+                // Sync user information
+                string commandText = $"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}";
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = serialNumber,
+                    CommandText = commandText
+                });
+
+                // Sync fingerprint templates for this user
+                var fingerprintTemplates = await _context.FingerprintTemplates
+                    .Where(ft => ft.UserId == user.Id)
+                    .ToListAsync();
+                foreach (var template in fingerprintTemplates)
+                {
+                    commandText = $"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={template.FingerIndex}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = serialNumber,
+                        CommandText = commandText
+                    });
+                }
+
+                // Sync face templates for this user
+                var faceTemplates = await _context.FaceTemplates
+                    .Where(ft => ft.Pin == user.Pin)
+                    .ToListAsync();
+                foreach (var template in faceTemplates)
+                {
+                    commandText = $"C:{commandIdCounter++}:DATA UPDATE FACE PIN={user.Pin}\tFID={template.FID}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = serialNumber,
+                        CommandText = commandText
+                    });
+                }
+
+                // Sync finger vein templates for this user
+                var fingerVeinTemplates = await _context.FingerVeinTemplates
+                    .Where(fvt => fvt.Pin == user.Pin)
+                    .ToListAsync();
+                foreach (var template in fingerVeinTemplates)
+                {
+                    commandText = $"C:{commandIdCounter++}:DATA UPDATE FVEIN PIN={user.Pin}\tFID={template.FID}\tIndex={template.Index}\tSize={template.Size}\tValid={template.Valid}\tTmp={template.Template}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = serialNumber,
+                        CommandText = commandText
+                    });
+                }
+
+                // Sync unified templates for this user
+                var unifiedTemplates = await _context.UnifiedTemplates
+                    .Where(ut => ut.Pin == user.Pin)
+                    .ToListAsync();
+                foreach (var template in unifiedTemplates)
+                {
+                    commandText = $"C:{commandIdCounter++}:DATA UPDATE BIODATA Pin={user.Pin}\tNo={template.No}\tIndex={template.Index}\tValid={template.Valid}\tDuress={template.Duress}\tType={template.Type}\tMajorVer={template.MajorVer}\tMinorVer={template.MinorVer}\tFormat={template.Format}\tTmp={template.Template}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = serialNumber,
+                        CommandText = commandText
+                    });
+                }
+            }
+
+            _context.ServerCommands.AddRange(commands);
+            await _context.SaveChangesAsync();
+
+            return Ok($"All data sync commands have been queued for device {serialNumber}. Total commands: {commands.Count}.");
+        }
     }
 }

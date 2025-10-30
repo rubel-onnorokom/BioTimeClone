@@ -123,6 +123,8 @@ export const clearData = (serialNumber) => apiClient.post(`/api/DeviceManagement
 export const clearAttendancePhotos = (serialNumber) => apiClient.post(`/api/DeviceManagement/${serialNumber}/clear-att-photos`);
 export const clearAttendanceLogs = (serialNumber) => apiClient.post(`/api/DeviceManagement/${serialNumber}/clear-att-logs`);
 export const getPendingCommands = (serialNumber) => apiClient.get(`/api/DeviceManagement/${serialNumber}/pending-commands`);
+export const clearDeviceCommands = (serialNumber) => apiClient.delete(`/api/DeviceManagement/${serialNumber}/clear-commands`);
+export const syncAllDataToDevice = (serialNumber) => apiClient.post(`/api/DeviceManagement/${serialNumber}/sync-all-data`);
 
 export const setDeviceOption = (serialNumber, key, value) => apiClient.post(`/api/DeviceManagement/${serialNumber}/set-option?key=${key}&value=${value}`);
 export const enrollFingerprint = (enrollDto) => apiClient.post(`/api/DeviceManagement/enrollment/fingerprint`, enrollDto);
