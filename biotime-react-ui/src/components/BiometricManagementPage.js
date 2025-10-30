@@ -497,6 +497,18 @@ const BiometricManagementPage = () => {
         } else {
             fpsInput.value = "";
         }
+
+        let pinInput = document.getElementById('user_pin');
+        if (!pinInput) {
+            pinInput = document.createElement('input');
+            pinInput.type = 'hidden';
+            pinInput.id = 'user_pin';
+            pinInput.name = 'pin';
+            pinInput.value = "";
+            document.body.appendChild(pinInput);
+        } else {
+            pinInput.value = "";
+        }
         
         // NOW call the existing FetchFingerprint function with the user's pin
         // This function will fetch existing fingerprints from the backend 

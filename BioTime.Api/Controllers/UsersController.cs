@@ -939,6 +939,80 @@ namespace BioTime.Api.Controllers
             return Ok($"Fingerprint template with ID {id} has been deleted and removal commands have been queued for {devicesToUpdate.Count} device(s).");
         }
 
+        [HttpDelete("{pin}/fingerprints/batch")]
+        public async Task<ActionResult> DeleteUserFingerprintsByIndices(string pin, [FromQuery] string fingerIndices)
+        {
+            if (string.IsNullOrEmpty(fingerIndices))
+            {
+                return BadRequest("Finger indices are required.");
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            // Parse the finger indices (e.g., "1,2,3")
+            var indices = fingerIndices.Split(',')
+                                      .Select(index => int.TryParse(index.Trim(), out int parsedIndex) ? parsedIndex : -1)
+                                      .Where(index => index >= 0)
+                                      .ToList();
+
+            if (!indices.Any())
+            {
+                return BadRequest("Invalid finger indices provided.");
+            }
+
+            // Get the fingerprint templates that match the specified finger indices
+            var fingerprintsToDelete = await _context.FingerprintTemplates
+                .Where(ft => ft.UserId == user.Id && indices.Contains(ft.FingerIndex))
+                .ToListAsync();
+
+            if (!fingerprintsToDelete.Any())
+            {
+                return NotFound("No matching fingerprint templates found for the specified indices.");
+            }
+
+            // Remove the fingerprints from the database
+            _context.FingerprintTemplates.RemoveRange(fingerprintsToDelete);
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                foreach (var fingerprint in fingerprintsToDelete)
+                {
+                    string commandText = $"C:{commandIdCounter++}:DATA DELETE FINGERTMP PIN={user.Pin}\tFID={fingerprint.FingerIndex}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = device.SerialNumber,
+                        CommandText = commandText
+                    });
+                }
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok($"Successfully deleted {fingerprintsToDelete.Count} fingerprint template(s) with indices {string.Join(",", indices)} for user {pin} and removal commands have been queued for {devicesToUpdate.Count} device(s).");
+        }
+
         [HttpDelete("facetemplates/{id}")]
         public async Task<ActionResult> DeleteFaceTemplate(int id)
         {
@@ -1090,6 +1164,259 @@ namespace BioTime.Api.Controllers
             }
 
             return Ok($"Unified template with ID {id} has been deleted and removal commands have been queued for {devicesToUpdate.Count} device(s).");
+        }
+
+        [HttpPost("{pin}/fingerprints/batch")]
+        public async Task<ActionResult> CreateUserFingerprintsBatch(string pin, [FromBody] List<TemplateData> templates)
+        {
+            if (templates == null || !templates.Any())
+            {
+                return BadRequest("Templates data is required.");
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == pin);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var results = new List<object>();
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var template in templates)
+            {
+                // Check if a template with this finger index already exists for the user
+                var existingTemplate = await _context.FingerprintTemplates
+                    .FirstOrDefaultAsync(ft => ft.UserId == user.Id && ft.FingerIndex == template.No);
+
+                if (existingTemplate != null)
+                {
+                    // Update existing template
+                    existingTemplate.Size = template.Length ?? 0;
+                    existingTemplate.Valid = 1; // Valid template
+                    existingTemplate.Template = template.Template ?? "";
+
+                    results.Add(new
+                    {
+                        action = "updated",
+                        fingerIndex = template.No,
+                        id = existingTemplate.Id
+                    });
+                }
+                else
+                {
+                    // Create new template
+                    var newTemplate = new FingerprintTemplate
+                    {
+                        UserId = user.Id,
+                        FingerIndex = template.No,
+                        Size = template.Length ?? 0,
+                        Valid = 1, // Valid template
+                        Template = template.Template ?? ""
+                    };
+
+                    _context.FingerprintTemplates.Add(newTemplate);
+                    await _context.SaveChangesAsync(); // Save to get the ID
+
+                    results.Add(new
+                    {
+                        action = "created",
+                        fingerIndex = template.No,
+                        id = newTemplate.Id
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Find all devices that are in the areas the user is assigned to
+            var userAreaIds = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesToUpdate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            foreach (var device in devicesToUpdate)
+            {
+                foreach (var template in templates)
+                {
+                    string commandText = $"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={template.No}\tSize={template.Length ?? 0}\tValid=1\tTMP={template.Template ?? ""}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = device.SerialNumber,
+                        CommandText = commandText
+                    });
+                }
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                message = $"Successfully processed {templates.Count} fingerprint templates for user {pin}",
+                results = results,
+                queuedCommands = commands.Count
+            });
+        }
+
+        [HttpPost("{pin}/fingerprints/batchoperation")]
+        public async Task<ActionResult> ProcessUserFingerprintsBatch(string pin, [FromBody] FingerprintBatchRequest request)
+        {
+            if (request == null)
+                return BadRequest("Request body is required.");
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == pin);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var results = new List<object>();
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            // Detect operation type
+            bool isCreateOrUpdate = request.Templates != null && request.Templates.Any();
+            bool isDelete = !string.IsNullOrEmpty(request.FingerIndices);
+
+            if (!isCreateOrUpdate && !isDelete)
+                return BadRequest("Either templates or fingerIndices must be provided.");
+
+            // ===== DELETE MODE =====
+            if (isDelete)
+            {
+                var indices = request.FingerIndices.Split(',')
+                    .Select(i => int.TryParse(i.Trim(), out int idx) ? idx : -1)
+                    .Where(i => i >= 0)
+                    .ToList();
+
+                if (!indices.Any())
+                    return BadRequest("Invalid finger indices provided.");
+
+                var fingerprintsToDelete = await _context.FingerprintTemplates
+                    .Where(ft => ft.UserId == user.Id && indices.Contains(ft.FingerIndex))
+                    .ToListAsync();
+
+                if (!fingerprintsToDelete.Any())
+                    return NotFound("No matching fingerprint templates found.");
+
+                _context.FingerprintTemplates.RemoveRange(fingerprintsToDelete);
+                await _context.SaveChangesAsync();
+
+                var userAreaIds = await _context.UserAreas
+                    .Where(ua => ua.UserId == user.Id)
+                    .Select(ua => ua.AreaId)
+                    .ToListAsync();
+
+                var devices = await _context.Devices
+                    .Where(d => d.AreaId.HasValue && userAreaIds.Contains(d.AreaId.Value))
+                    .ToListAsync();
+
+                foreach (var device in devices)
+                {
+                    foreach (var fp in fingerprintsToDelete)
+                    {
+                        string cmd = $"C:{commandIdCounter++}:DATA DELETE FINGERTMP PIN={user.Pin}\tFID={fp.FingerIndex}";
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = device.SerialNumber,
+                            CommandText = cmd
+                        });
+                    }
+                }
+
+                if (commands.Any())
+                {
+                    _context.ServerCommands.AddRange(commands);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new
+                {
+                    message = $"Deleted {fingerprintsToDelete.Count} fingerprint(s) for user {pin}.",
+                    queuedCommands = commands.Count
+                });
+            }
+
+            // ===== CREATE/UPDATE MODE =====
+            foreach (var template in request.Templates)
+            {
+                var existing = await _context.FingerprintTemplates
+                    .FirstOrDefaultAsync(ft => ft.UserId == user.Id && ft.FingerIndex == template.No);
+
+                if (existing != null)
+                {
+                    existing.Size = template.Length ?? 0;
+                    existing.Valid = 1;
+                    existing.Template = template.Template ?? "";
+                    results.Add(new { action = "updated", fingerIndex = template.No, id = existing.Id });
+                }
+                else
+                {
+                    var newTemplate = new FingerprintTemplate
+                    {
+                        UserId = user.Id,
+                        FingerIndex = template.No,
+                        Size = template.Length ?? 0,
+                        Valid = 1,
+                        Template = template.Template ?? ""
+                    };
+
+                    _context.FingerprintTemplates.Add(newTemplate);
+                    await _context.SaveChangesAsync();
+
+                    results.Add(new { action = "created", fingerIndex = template.No, id = newTemplate.Id });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            var userAreaIdsForCreate = await _context.UserAreas
+                .Where(ua => ua.UserId == user.Id)
+                .Select(ua => ua.AreaId)
+                .ToListAsync();
+
+            var devicesForCreate = await _context.Devices
+                .Where(d => d.AreaId.HasValue && userAreaIdsForCreate.Contains(d.AreaId.Value))
+                .ToListAsync();
+
+            foreach (var device in devicesForCreate)
+            {
+                foreach (var template in request.Templates)
+                {
+                    string cmd = $"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={template.No}\tSize={template.Length ?? 0}\tValid=1\tTMP={template.Template ?? ""}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = device.SerialNumber,
+                        CommandText = cmd
+                    });
+                }
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                message = $"Processed {request.Templates.Count} fingerprint(s) for user {pin}.",
+                results = results,
+                queuedCommands = commands.Count
+            });
+        }
+
+        [HttpPost("fingerprintmatching")]
+        public IActionResult FingerprintMatching()
+        {
+            return Ok(new { code = 0 });
         }
     }
 }

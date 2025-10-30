@@ -1235,7 +1235,7 @@ class FPRegister {
         }
     }
 
-    deleteTemplate(userId, fingerIndices) {
+    deleteTemplate(pin, fingerIndices) {
 
         if (fingerIndices.length === 0) {
             return;
@@ -1244,10 +1244,10 @@ class FPRegister {
         const indexs = fingerIndices;
 
         // Build the URL with query parameters
-        const url = `/MonthlyTeacherFingerprint/DeleteFingerPrint?id=${encodeURIComponent(userId)}&indexs=${encodeURIComponent(indexs)}`;
+        const url = `/api/users/${encodeURIComponent(pin)}/fingerprints/batch?fingerIndices=${encodeURIComponent(indexs)}`;
 
         fetch(url, {
-            method: 'GET',
+            method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -1266,7 +1266,7 @@ class FPRegister {
             });
     }
 
-    saveToServer(templates) {
+    saveToServer(pin,templates) {
         const filteredArr = templates
             .filter(item => item.hasOwnProperty('length'))
             .map(item => ({
@@ -1280,24 +1280,15 @@ class FPRegister {
             return;
         }
 
-        var Id = $("#Id").val();
-        var teacherId = $("#teacherId").val();
+        console.log("saveToServer: ", filteredArr);
+        const url = `/api/users/${encodeURIComponent(pin)}/fingerprints/batch`;
 
-        // Wrap the array and additional info in an object
-        const result = {
-            Id: Id,
-            teacherId: teacherId,
-            templates: filteredArr
-        };
-
-        console.log("saveToServer: ", result);
-
-        fetch("/MonthlyTeacherFingerprint/GetTemplateExt", {
+        fetch(url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(result)
+            body: JSON.stringify(filteredArr)
         })
             .then(response => {
                 if (!response.ok) throw new Error("Server error");
@@ -1312,15 +1303,59 @@ class FPRegister {
     }
 
 
+    syncFingerprints(pin, templates = [], fingerIndices = "") {
+        // Determine the operation
+        const filteredArr = templates
+            .filter(item => item.hasOwnProperty('length'))
+            .map(item => ({
+                no: item.no || null,
+                length: item.length,
+                version: item.version || null,
+                template: item.template || null
+            }));
+
+        const url = `/api/users/${encodeURIComponent(pin)}/fingerprints/batchoperation`;
+
+        let body = { templates: filteredArr,fingerIndices: Array.isArray(fingerIndices) ? fingerIndices.join(",") : fingerIndices };
+
+        try {
+            const response = fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const text = response.text();
+                throw new Error(`Server error: ${response.status} - ${text}`);
+            }
+
+            const data = response.json();
+            console.log("Server response:", data);
+
+            if (isDelete) {
+                console.log(`✅ Deleted fingerprints [${fingerIndices}] for PIN ${pin}`);
+            } else {
+                console.log(`✅ Saved/updated ${templates.length} fingerprint(s) for PIN ${pin}`);
+            }
+        } catch (err) {
+            console.error("❌ syncFingerprints error:", err);
+        }
+    }
+
+
+
     /**
      * Save data to HTML
      */
     saveData() {
         $("#" + this.id_del_fps).val(this.delFPIdArray.toString());
         let temps = [];
-        var id = $("#Id").val();
-        this.deleteTemplate(id, this.delFPIdArray.toString());
-        console.log("Deleting templates for user ID:", id, "Finger indices:", this.delFPIdArray.toString());
+        var pin = $("#user_pin").val();
+        //this.deleteTemplate(pin, this.delFPIdArray.toString());
+        console.log("Deleting templates for user ID:", pin, "Finger indices:", this.delFPIdArray.toString());
         for (let i = 0; i < this.fpArray.length; i++) {
             if (this.fpArray[i]) {
                 let d = this.fpArray[i];
@@ -1334,7 +1369,8 @@ class FPRegister {
         }
         console.log("saveData: " + temps.length + " indx " + this.currentFPNum);
         console.log(temps);
-        this.saveToServer(temps);
+        //this.saveToServer(pin,temps);
+        this.syncFingerprints(pin, temps, this.delFPIdArray.toString());
         $("#id_fpCount").val(temps.length);
         $("#" + this.id_templates).val(JSON.stringify(temps));
         let dur_fps = [];
@@ -1449,7 +1485,7 @@ class FPRegister {
         let ret = "";
         $.ajax({
             type: "POST",
-            url: "/api/users/fingerprintMatching/",
+            url: "/api/users/fingerprintmatching/",
             contentType: "application/x-www-form-urlencoded;charset=UTF-8",
             data: "template=" + temp + "&templates=" + temps,
             dataType: "json",
@@ -1707,7 +1743,7 @@ function GetFingerIndex() {
 }
 
 function GetId() {
-    return $("#Id").val();
+    return $("#user_pin").val();
 }
 function GetTeacherId() {
     return $("#teacherId").val();
@@ -1900,6 +1936,7 @@ function autoStartRegistration() {
 }
 
 function FetchFingerprint(id) {
+    $("#user_pin").val(id);
     const url = `/api/users/${id}/fingerprints`;
     $.ajax({
         url: url,
