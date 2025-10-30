@@ -498,39 +498,6 @@ const BiometricManagementPage = () => {
             fpsInput.value = "";
         }
         
-        // Override the submitEvent to handle saving templates after registration
-        window.submitEvent = async function() {
-            // Get the templates from the hidden input field
-            const templatesInput = document.getElementById('id_templates');
-            if (templatesInput && templatesInput.value) {
-                try {
-                    const registeredTemplates = JSON.parse(templatesInput.value);
-                    
-                    if (Array.isArray(registeredTemplates) && registeredTemplates.length > 0) {
-                        // Process each registered template and save to the server
-                        for (const template of registeredTemplates) {
-                            await createUserFingerprint(pin, {
-                                fingerIndex: template.no || 0,
-                                size: template.length || 0,
-                                valid: 1, // Valid template
-                                template: template.template
-                            });
-                        }
-                        
-                        setMessage(`Successfully registered ${registeredTemplates.length} fingerprint(s) for user ${pin}`);
-                        
-                        // Refresh the fingerprint list
-                        const response = await getUserFingerprints(pin);
-                        setFingerprints(prev => ({ ...prev, [pin]: response.data }));
-                    }
-                } catch (parseError) {
-                    console.error('Error parsing registered templates:', parseError);
-                    console.error('Raw templates value:', templatesInput.value);
-                    setMessage('Error processing registered fingerprint templates.');
-                }
-            }
-        };
-        
         // NOW call the existing FetchFingerprint function with the user's pin
         // This function will fetch existing fingerprints from the backend 
         // and populate the id_templates field in the required format
@@ -577,7 +544,7 @@ const BiometricManagementPage = () => {
                                     onClick={handleHardwareFingerprintRegistration}
                                     className="d-flex align-items-center"
                                 >
-                                    <FaFingerprint className="me-1" /> Hardware Registration
+                                    <FaFingerprint className="me-1" /> Enroll
                                 </Button>
                             </div>
                         </Card.Header>

@@ -1320,6 +1320,7 @@ class FPRegister {
         let temps = [];
         var id = $("#Id").val();
         this.deleteTemplate(id, this.delFPIdArray.toString());
+        console.log("Deleting templates for user ID:", id, "Finger indices:", this.delFPIdArray.toString());
         for (let i = 0; i < this.fpArray.length; i++) {
             if (this.fpArray[i]) {
                 let d = this.fpArray[i];
