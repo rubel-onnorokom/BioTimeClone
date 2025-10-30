@@ -752,7 +752,7 @@ class FPRegister {
         } else if (num < 12) {// 10  11  palm
             new HandRender(context, coordArray).drawHand(color);
         }
-        this.drawImage(context, "/Content/MonthlyTeacher/base_fpVerify_clearImage.png", "clearForRegister");
+        this.drawImage(context, "/base_fpVerify_clearImage.png", "clearForRegister");
     }
     /**
      * Draw finger
@@ -1072,7 +1072,7 @@ class FPRegister {
      * @param context
      */
     clearFPImage(context) {
-        this.drawImage(context, "/Content/MonthlyTeacher/base_fpVerify_clearImage.png", "clearForRegister");
+        this.drawImage(context, "/base_fpVerify_clearImage.png", "clearForRegister");
     }
     /**
      * Load fingerprint version list into HTML
