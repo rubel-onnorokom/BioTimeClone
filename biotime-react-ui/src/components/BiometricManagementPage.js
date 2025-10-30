@@ -419,7 +419,7 @@ const BiometricManagementPage = () => {
     };
 
     // Function to handle hardware fingerprint registration using FetchFingerprint
-    const handleHardwareFingerprintRegistration = () => {
+    const handleHardwareFingerprintRegistration = async () => {
         // Check if required dependencies are available
         if (typeof window.$ === 'undefined') {
             setMessage('jQuery is required but not loaded properly.');
@@ -429,6 +429,73 @@ const BiometricManagementPage = () => {
         if (typeof window.FetchFingerprint === 'undefined') {
             setMessage('FetchFingerprint function is not available. Please ensure FPRegister.js is loaded properly.');
             return;
+        }
+        
+        // FIRST: Ensure that the hidden input fields exist in the DOM
+        // This is required for the FPRegister.js functions to work properly
+        let templatesInput = document.getElementById('id_templates');
+        if (!templatesInput) {
+            templatesInput = document.createElement('input');
+            templatesInput.type = 'hidden';
+            templatesInput.id = 'id_templates';
+            templatesInput.name = 'templates';
+            templatesInput.autocomplete = 'off';
+            templatesInput.setAttribute('lay-verify', 'templates');
+            templatesInput.className = 'layui-input';
+            templatesInput.value = "[]"; // Initialize with empty array
+            document.body.appendChild(templatesInput);
+        } else {
+            // If it exists, make sure it has a default value
+            templatesInput.value = "[]";
+        }
+        
+        let delFpsInput = document.getElementById('id_del_fps');
+        if (!delFpsInput) {
+            delFpsInput = document.createElement('input');
+            delFpsInput.type = 'hidden';
+            delFpsInput.id = 'id_del_fps';
+            delFpsInput.name = 'delFps';
+            delFpsInput.value = "";
+            document.body.appendChild(delFpsInput);
+        } else {
+            delFpsInput.value = "";
+        }
+        
+        let durFpsInput = document.getElementById('id_dur_fps');
+        if (!durFpsInput) {
+            durFpsInput = document.createElement('input');
+            durFpsInput.type = 'hidden';
+            durFpsInput.id = 'id_dur_fps';
+            durFpsInput.name = 'durFps';
+            durFpsInput.value = "[]";
+            document.body.appendChild(durFpsInput);
+        } else {
+            durFpsInput.value = "[]";
+        }
+        
+        let fpTypeInput = document.getElementById('id_fp_type');
+        if (!fpTypeInput) {
+            fpTypeInput = document.createElement('input');
+            fpTypeInput.type = 'hidden';
+            fpTypeInput.id = 'id_fp_type';
+            fpTypeInput.name = 'fpType';
+            fpTypeInput.value = "";
+            document.body.appendChild(fpTypeInput);
+        } else {
+            fpTypeInput.value = "";
+        }
+        
+        // Make sure the id_fps input exists too if it's needed
+        let fpsInput = document.getElementById('id_fps');
+        if (!fpsInput) {
+            fpsInput = document.createElement('input');
+            fpsInput.type = 'hidden';
+            fpsInput.id = 'id_fps';
+            fpsInput.name = 'fps';
+            fpsInput.value = "";
+            document.body.appendChild(fpsInput);
+        } else {
+            fpsInput.value = "";
         }
         
         // Override the submitEvent to handle saving templates after registration
@@ -458,13 +525,15 @@ const BiometricManagementPage = () => {
                     }
                 } catch (parseError) {
                     console.error('Error parsing registered templates:', parseError);
+                    console.error('Raw templates value:', templatesInput.value);
                     setMessage('Error processing registered fingerprint templates.');
                 }
             }
         };
         
-        // Call the existing FetchFingerprint function with the user's pin
-        // This will fetch existing fingerprints and start the registration process
+        // NOW call the existing FetchFingerprint function with the user's pin
+        // This function will fetch existing fingerprints from the backend 
+        // and populate the id_templates field in the required format
         window.FetchFingerprint(pin);
     };
 

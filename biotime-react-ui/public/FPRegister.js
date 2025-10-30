@@ -1906,10 +1906,20 @@ function FetchFingerprint(id) {
         dataType: 'json',
         success: function (response) {
             console.log('Fingerprint data:', response);
-            //const result = response.json();
-            const jsonstring = JSON.stringify(response);
+            const formatted = response
+                .filter(item => item && item.template) // remove null or invalid entries
+                .map(item => ({
+                    no: item.fingerIndex ?? item.id ?? 0,
+                    version: "10",
+                    template: item.template
+                }));
+
+            // ✅ Convert to JSON string
+            const jsonstring = JSON.stringify(formatted);
+            console.log('Formatted JSON string:', jsonstring);
 
             $("#id_templates").val(jsonstring);
+            console.log($("#id_templates").val());
 
             // Start registration automatically
             autoStartRegistration();
