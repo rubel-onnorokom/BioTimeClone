@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, Button, Alert, Table, Spinner, Tab, Tabs, Modal, Form } from 'react-bootstrap';
-import { FaTrash, FaExclamationTriangle, FaInfoCircle } from 'react-icons/fa';
+import { FaTrash, FaExclamationTriangle, FaInfoCircle, FaFingerprint } from 'react-icons/fa';
 import { getUserFingerprints, getUserFaceTemplates, getUserFingerVeinTemplates, getUserUnifiedTemplates, 
          createUserFingerprint, updateUserFingerprint, deleteUserFingerprint,
          createFaceTemplate, updateFaceTemplate, deleteFaceTemplate,
@@ -418,6 +418,56 @@ const BiometricManagementPage = () => {
         }
     };
 
+    // Function to handle hardware fingerprint registration using FetchFingerprint
+    const handleHardwareFingerprintRegistration = () => {
+        // Check if required dependencies are available
+        if (typeof window.$ === 'undefined') {
+            setMessage('jQuery is required but not loaded properly.');
+            return;
+        }
+        
+        if (typeof window.FetchFingerprint === 'undefined') {
+            setMessage('FetchFingerprint function is not available. Please ensure FPRegister.js is loaded properly.');
+            return;
+        }
+        
+        // Override the submitEvent to handle saving templates after registration
+        window.submitEvent = async function() {
+            // Get the templates from the hidden input field
+            const templatesInput = document.getElementById('id_templates');
+            if (templatesInput && templatesInput.value) {
+                try {
+                    const registeredTemplates = JSON.parse(templatesInput.value);
+                    
+                    if (Array.isArray(registeredTemplates) && registeredTemplates.length > 0) {
+                        // Process each registered template and save to the server
+                        for (const template of registeredTemplates) {
+                            await createUserFingerprint(pin, {
+                                fingerIndex: template.no || 0,
+                                size: template.length || 0,
+                                valid: 1, // Valid template
+                                template: template.template
+                            });
+                        }
+                        
+                        setMessage(`Successfully registered ${registeredTemplates.length} fingerprint(s) for user ${pin}`);
+                        
+                        // Refresh the fingerprint list
+                        const response = await getUserFingerprints(pin);
+                        setFingerprints(prev => ({ ...prev, [pin]: response.data }));
+                    }
+                } catch (parseError) {
+                    console.error('Error parsing registered templates:', parseError);
+                    setMessage('Error processing registered fingerprint templates.');
+                }
+            }
+        };
+        
+        // Call the existing FetchFingerprint function with the user's pin
+        // This will fetch existing fingerprints and start the registration process
+        window.FetchFingerprint(pin);
+    };
+
     if (isLoading) {
         return (
             <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
@@ -448,9 +498,19 @@ const BiometricManagementPage = () => {
                     <Card>
                         <Card.Header className="d-flex justify-content-between align-items-center">
                             Fingerprints
-                            <Button variant="primary" size="sm" onClick={handleCreateFingerprint}>
-                                Add Fingerprint
-                            </Button>
+                            <div className="d-flex gap-2">
+                                <Button variant="primary" size="sm" onClick={handleCreateFingerprint}>
+                                    Add Fingerprint
+                                </Button>
+                                <Button 
+                                    variant="success" 
+                                    size="sm" 
+                                    onClick={handleHardwareFingerprintRegistration}
+                                    className="d-flex align-items-center"
+                                >
+                                    <FaFingerprint className="me-1" /> Hardware Registration
+                                </Button>
+                            </div>
                         </Card.Header>
                         <Card.Body>
                             <div className="table-responsive">
