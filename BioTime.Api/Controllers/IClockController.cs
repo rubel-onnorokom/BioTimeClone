@@ -591,6 +591,9 @@ namespace BioTime.Api.Controllers
                 if (faceTemplates.Count > 0)
                 {
                     context.FaceTemplates.AddRange(faceTemplates);
+                    
+                    // Generate sync commands for all devices the users have access to
+                    await GenerateBiometricSyncCommands(context, faceTemplates, device.SerialNumber);
                 }
             }
             else if (table.ToUpper() == "BIODATA")
@@ -624,6 +627,9 @@ namespace BioTime.Api.Controllers
                 if (unifiedTemplates.Count > 0)
                 {
                     context.UnifiedTemplates.AddRange(unifiedTemplates);
+                    
+                    // Generate sync commands for all devices the users have access to
+                    await GenerateBiometricSyncCommands(context, unifiedTemplates, device.SerialNumber);
                 }
             }
             else if (table.ToUpper() == "FVEIN")
@@ -653,6 +659,9 @@ namespace BioTime.Api.Controllers
                 if (fingerVeinTemplates.Count > 0)
                 {
                     context.FingerVeinTemplates.AddRange(fingerVeinTemplates);
+                    
+                    // Generate sync commands for all devices the users have access to
+                    await GenerateBiometricSyncCommands(context, fingerVeinTemplates, device.SerialNumber);
                 }
             }
             else if (table.ToUpper() == "USERPIC")
@@ -817,6 +826,9 @@ namespace BioTime.Api.Controllers
                 if (fingerprintTemplates.Count > 0)
                 {
                     context.FingerprintTemplates.AddRange(fingerprintTemplates);
+                    
+                    // Generate sync commands for all devices the users have access to
+                    await GenerateBiometricSyncCommands(context, fingerprintTemplates, device.SerialNumber);
                 }
             }
 
@@ -879,6 +891,271 @@ namespace BioTime.Api.Controllers
             }
 
             return 0;
+        }
+
+        /// <summary>
+        /// Generates sync commands for biometric templates to all devices the users have access to
+        /// </summary>
+        /// <param name="context">Database context</param>
+        /// <param name="templates">Collection of fingerprint templates</param>
+        /// <param name="sourceDeviceSerialNumber">Serial number of the device that sent the data</param>
+        private async Task GenerateBiometricSyncCommands(BioTimeDbContext context, List<FingerprintTemplate> templates, string sourceDeviceSerialNumber)
+        {
+            // Get all unique user IDs from the templates
+            var userIds = templates.Select(t => t.UserId).Distinct().ToList();
+            if (!userIds.Any()) return;
+
+            // Get all area IDs these users have access to
+            var userAreaIds = await context.UserAreas
+                .Where(ua => userIds.Contains(ua.UserId))
+                .Select(ua => ua.AreaId)
+                .Distinct()
+                .ToListAsync();
+
+            if (!userAreaIds.Any()) return;
+
+            // Get all devices in these areas (excluding the source device)
+            var devicesToUpdate = await context.Devices
+                .Where(d => d.AreaId.HasValue && 
+                           userAreaIds.Contains(d.AreaId.Value) && 
+                           d.SerialNumber != sourceDeviceSerialNumber)
+                .ToListAsync();
+
+            if (!devicesToUpdate.Any()) return;
+
+            // Get user PINs for all users
+            var userPins = await context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.Pin);
+
+            // Generate commands for each device
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                // Generate commands for each template
+                foreach (var template in templates)
+                {
+                    if (userPins.TryGetValue(template.UserId, out string? pin) && !string.IsNullOrEmpty(pin))
+                    {
+                        string commandText = $"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={pin}\tFID={template.FingerIndex}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
+                        
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = device.SerialNumber,
+                            CommandText = commandText
+                        });
+                    }
+                }
+            }
+
+            // Add all commands to database
+            if (commands.Any())
+            {
+                context.ServerCommands.AddRange(commands);
+            }
+        }
+
+        /// <summary>
+        /// Generates sync commands for face templates to all devices the users have access to
+        /// </summary>
+        /// <param name="context">Database context</param>
+        /// <param name="templates">Collection of face templates</param>
+        /// <param name="sourceDeviceSerialNumber">Serial number of the device that sent the data</param>
+        private async Task GenerateBiometricSyncCommands(BioTimeDbContext context, List<FaceTemplate> templates, string sourceDeviceSerialNumber)
+        {
+            // Get all unique PINs from the templates
+            var pins = templates.Select(t => t.Pin).Where(p => !string.IsNullOrEmpty(p)).Distinct().ToList();
+            if (!pins.Any()) return;
+
+            // Get user IDs for these PINs
+            var users = await context.Users
+                .Where(u => pins.Contains(u.Pin))
+                .ToDictionaryAsync(u => u.Pin, u => u.Id);
+
+            var userIds = users.Values.ToList();
+            if (!userIds.Any()) return;
+
+            // Get all area IDs these users have access to
+            var userAreaIds = await context.UserAreas
+                .Where(ua => userIds.Contains(ua.UserId))
+                .Select(ua => ua.AreaId)
+                .Distinct()
+                .ToListAsync();
+
+            if (!userAreaIds.Any()) return;
+
+            // Get all devices in these areas (excluding the source device)
+            var devicesToUpdate = await context.Devices
+                .Where(d => d.AreaId.HasValue && 
+                           userAreaIds.Contains(d.AreaId.Value) && 
+                           d.SerialNumber != sourceDeviceSerialNumber)
+                .ToListAsync();
+
+            if (!devicesToUpdate.Any()) return;
+
+            // Generate commands for each device
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                // Generate commands for each template
+                foreach (var template in templates)
+                {
+                    if (!string.IsNullOrEmpty(template.Pin))
+                    {
+                        string commandText = $"C:{commandIdCounter++}:DATA UPDATE FACE PIN={template.Pin}\tFID={template.FID}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
+                        
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = device.SerialNumber,
+                            CommandText = commandText
+                        });
+                    }
+                }
+            }
+
+            // Add all commands to database
+            if (commands.Any())
+            {
+                context.ServerCommands.AddRange(commands);
+            }
+        }
+
+        /// <summary>
+        /// Generates sync commands for finger vein templates to all devices the users have access to
+        /// </summary>
+        /// <param name="context">Database context</param>
+        /// <param name="templates">Collection of finger vein templates</param>
+        /// <param name="sourceDeviceSerialNumber">Serial number of the device that sent the data</param>
+        private async Task GenerateBiometricSyncCommands(BioTimeDbContext context, List<FingerVeinTemplate> templates, string sourceDeviceSerialNumber)
+        {
+            // Get all unique PINs from the templates
+            var pins = templates.Select(t => t.Pin).Where(p => !string.IsNullOrEmpty(p)).Distinct().ToList();
+            if (!pins.Any()) return;
+
+            // Get user IDs for these PINs
+            var users = await context.Users
+                .Where(u => pins.Contains(u.Pin))
+                .ToDictionaryAsync(u => u.Pin, u => u.Id);
+
+            var userIds = users.Values.ToList();
+            if (!userIds.Any()) return;
+
+            // Get all area IDs these users have access to
+            var userAreaIds = await context.UserAreas
+                .Where(ua => userIds.Contains(ua.UserId))
+                .Select(ua => ua.AreaId)
+                .Distinct()
+                .ToListAsync();
+
+            if (!userAreaIds.Any()) return;
+
+            // Get all devices in these areas (excluding the source device)
+            var devicesToUpdate = await context.Devices
+                .Where(d => d.AreaId.HasValue && 
+                           userAreaIds.Contains(d.AreaId.Value) && 
+                           d.SerialNumber != sourceDeviceSerialNumber)
+                .ToListAsync();
+
+            if (!devicesToUpdate.Any()) return;
+
+            // Generate commands for each device
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                // Generate commands for each template
+                foreach (var template in templates)
+                {
+                    if (!string.IsNullOrEmpty(template.Pin))
+                    {
+                        string commandText = $"C:{commandIdCounter++}:DATA UPDATE FVEIN PIN={template.Pin}\tFID={template.FID}\tIndex={template.Index}\tSize={template.Size}\tValid={template.Valid}\tTmp={template.Template}";
+                        
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = device.SerialNumber,
+                            CommandText = commandText
+                        });
+                    }
+                }
+            }
+
+            // Add all commands to database
+            if (commands.Any())
+            {
+                context.ServerCommands.AddRange(commands);
+            }
+        }
+
+        /// <summary>
+        /// Generates sync commands for unified templates to all devices the users have access to
+        /// </summary>
+        /// <param name="context">Database context</param>
+        /// <param name="templates">Collection of unified templates</param>
+        /// <param name="sourceDeviceSerialNumber">Serial number of the device that sent the data</param>
+        private async Task GenerateBiometricSyncCommands(BioTimeDbContext context, List<UnifiedTemplate> templates, string sourceDeviceSerialNumber)
+        {
+            // Get all unique PINs from the templates
+            var pins = templates.Select(t => t.Pin).Where(p => !string.IsNullOrEmpty(p)).Distinct().ToList();
+            if (!pins.Any()) return;
+
+            // Get user IDs for these PINs
+            var users = await context.Users
+                .Where(u => pins.Contains(u.Pin))
+                .ToDictionaryAsync(u => u.Pin, u => u.Id);
+
+            var userIds = users.Values.ToList();
+            if (!userIds.Any()) return;
+
+            // Get all area IDs these users have access to
+            var userAreaIds = await context.UserAreas
+                .Where(ua => userIds.Contains(ua.UserId))
+                .Select(ua => ua.AreaId)
+                .Distinct()
+                .ToListAsync();
+
+            if (!userAreaIds.Any()) return;
+
+            // Get all devices in these areas (excluding the source device)
+            var devicesToUpdate = await context.Devices
+                .Where(d => d.AreaId.HasValue && 
+                           userAreaIds.Contains(d.AreaId.Value) && 
+                           d.SerialNumber != sourceDeviceSerialNumber)
+                .ToListAsync();
+
+            if (!devicesToUpdate.Any()) return;
+
+            // Generate commands for each device
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            foreach (var device in devicesToUpdate)
+            {
+                // Generate commands for each template
+                foreach (var template in templates)
+                {
+                    if (!string.IsNullOrEmpty(template.Pin))
+                    {
+                        string commandText = $"C:{commandIdCounter++}:DATA UPDATE BIODATA Pin={template.Pin}\tNo={template.No}\tIndex={template.Index}\tValid={template.Valid}\tDuress={template.Duress}\tType={template.Type}\tMajorVer={template.MajorVer}\tMinorVer={template.MinorVer}\tFormat={template.Format}\tTmp={template.Template}";
+                        
+                        commands.Add(new ServerCommand
+                        {
+                            DeviceSerialNumber = device.SerialNumber,
+                            CommandText = commandText
+                        });
+                    }
+                }
+            }
+
+            // Add all commands to database
+            if (commands.Any())
+            {
+                context.ServerCommands.AddRange(commands);
+            }
         }
 
         // GET /iclock/ping?SN=...
