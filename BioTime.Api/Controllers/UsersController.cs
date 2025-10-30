@@ -1416,7 +1416,7 @@ namespace BioTime.Api.Controllers
         [HttpPost("fingerprintmatching")]
         public IActionResult FingerprintMatching()
         {
-            return Ok(new { code = 0 });
+            return Ok(new { code = -1 });
         }
     }
 }

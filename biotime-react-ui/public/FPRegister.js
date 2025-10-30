@@ -1303,15 +1303,15 @@ class FPRegister {
     }
 
 
-    syncFingerprints(pin, templates = [], fingerIndices = "") {
+    syncFingerprints(pin, templatess, fingerIndices) {
         // Determine the operation
-        const filteredArr = templates
+        const filteredArr = templatess
             .filter(item => item.hasOwnProperty('length'))
             .map(item => ({
-                no: item.no || null,
+                no: item.no != null ? item.no : null,
                 length: item.length,
-                version: item.version || null,
-                template: item.template || null
+                version: item.version != null ? item.version : null,
+                template: item.template != null ? item.template : null
             }));
 
         const url = `/api/users/${encodeURIComponent(pin)}/fingerprints/batchoperation`;
@@ -1325,21 +1325,16 @@ class FPRegister {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify(body)
+            }).then(response => {
+                if (!response.ok) throw new Error("Server error");
+                return response.json();
+            })
+            .then(data => {
+                console.log("GetTemplateExt response:", data);
+            })
+            .catch(err => {
+                console.error("GetTemplateExt error:", err);
             });
-
-            if (!response.ok) {
-                const text = response.text();
-                throw new Error(`Server error: ${response.status} - ${text}`);
-            }
-
-            const data = response.json();
-            console.log("Server response:", data);
-
-            if (isDelete) {
-                console.log(`✅ Deleted fingerprints [${fingerIndices}] for PIN ${pin}`);
-            } else {
-                console.log(`✅ Saved/updated ${templates.length} fingerprint(s) for PIN ${pin}`);
-            }
         } catch (err) {
             console.error("❌ syncFingerprints error:", err);
         }
