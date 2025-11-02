@@ -85,7 +85,7 @@ namespace BioTime.Api.Controllers
             var device = await _context.Devices.FirstOrDefaultAsync(d => d.SerialNumber == SN);
             if (device == null)
             {
-                device = new Device { SerialNumber = SN };
+                device = new Device { Name = "Auto Add", SerialNumber = SN };
                 _context.Devices.Add(device);
             }
 
@@ -118,7 +118,7 @@ namespace BioTime.Api.Controllers
                            + $"TransFlag={device.TransFlag}\n"
                            + $"Realtime={device.Realtime}\n"
                            + $"TimeZone={device.TimeZone}\n"
-                           + $"Encrypt={ (device.IsEncryptionEnabled ? 1 : 0) }\n";
+                           + $"Encrypt={(device.IsEncryptionEnabled ? 1 : 0)}\n";
 
             return Content(response, "text/plain");
         }
@@ -135,8 +135,7 @@ namespace BioTime.Api.Controllers
             var device = await _context.Devices.FirstOrDefaultAsync(d => d.SerialNumber == SN);
             if (device == null)
             {
-                device = new Device { SerialNumber = SN };
-                _context.Devices.Add(device);
+                return Content("OK", "text/plain");
             }
 
             if (!string.IsNullOrEmpty(INFO))
@@ -157,21 +156,21 @@ namespace BioTime.Api.Controllers
                 }
             }
 
-            var command = await _context.ServerCommands
+            var commands = await _context.ServerCommands
                 .Where(c => c.DeviceSerialNumber == SN && !c.IsSent)
                 .OrderBy(c => c.Id)
-                .FirstOrDefaultAsync();
+                .ToListAsync();
 
-            if (command != null)
+            string commandTextCombined = string.Join("\n", commands.Select(c => c.CommandText));
+
+            _context.ServerCommands.RemoveRange(commands);
+
+            if (string.IsNullOrEmpty(commandTextCombined))
             {
-                command.IsSent = true;
-                command.SentOn = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-
-                return Content(command.CommandText ?? "", "text/plain");
+                return Content(commandTextCombined ?? "", "text/plain");
             }
-
             await _context.SaveChangesAsync();
+
             return Content("OK", "text/plain");
         }
 
@@ -187,33 +186,6 @@ namespace BioTime.Api.Controllers
 
             using var reader = new StreamReader(Request.Body);
             var body = await reader.ReadToEndAsync();
-
-            string? cmdIdStr = null;
-            var pairs = body.Split('&');
-            foreach (var pair in pairs)
-            {
-                var kv = pair.Split('=');
-                if (kv.Length == 2 && kv[0] == "ID")
-                {
-                    cmdIdStr = kv[1];
-                    break;
-                }
-            }
-
-            if (!string.IsNullOrEmpty(cmdIdStr) && int.TryParse(cmdIdStr, out int cmdId))
-            {
-                var command = await _context.ServerCommands.FindAsync(cmdId);
-                if (command != null)
-                {
-                    command.IsAcknowledged = true;
-                    command.AcknowledgedOn = DateTime.UtcNow;
-                    command.AckResponse = body;
-                    await _context.SaveChangesAsync();
-
-                    _context.ServerCommands.Remove(command);
-                    await _context.SaveChangesAsync();
-                }
-            }
 
             return Content("OK", "text/plain");
         }
@@ -339,7 +311,7 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all attendance logs
                 if (attendanceLogs.Count > 0)
                 {
@@ -372,7 +344,7 @@ namespace BioTime.Api.Controllers
                         }
                     }
                 }
-                
+
                 // Bulk insert all operation logs
                 if (operationLogs.Count > 0)
                 {
@@ -448,7 +420,7 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all user info
                 if (userInfos.Count > 0)
                 {
@@ -488,7 +460,7 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all identity cards
                 if (identityCards.Count > 0)
                 {
@@ -519,7 +491,7 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all identity card attendance logs
                 if (identityCardAttendanceLogs.Count > 0)
                 {
@@ -558,7 +530,7 @@ namespace BioTime.Api.Controllers
                     identityCardAttendancePhotos.Add(photo);
                     recordsProcessed++;
                 }
-                
+
                 // Bulk insert identity card attendance photos
                 if (identityCardAttendancePhotos.Count > 0)
                 {
@@ -586,12 +558,12 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all face templates
                 if (faceTemplates.Count > 0)
                 {
                     context.FaceTemplates.AddRange(faceTemplates);
-                    
+
                     // Generate sync commands for all devices the users have access to
                     await GenerateBiometricSyncCommands(context, faceTemplates, device.SerialNumber);
                 }
@@ -622,12 +594,12 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all unified templates
                 if (unifiedTemplates.Count > 0)
                 {
                     context.UnifiedTemplates.AddRange(unifiedTemplates);
-                    
+
                     // Generate sync commands for all devices the users have access to
                     await GenerateBiometricSyncCommands(context, unifiedTemplates, device.SerialNumber);
                 }
@@ -654,12 +626,12 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all finger vein templates
                 if (fingerVeinTemplates.Count > 0)
                 {
                     context.FingerVeinTemplates.AddRange(fingerVeinTemplates);
-                    
+
                     // Generate sync commands for all devices the users have access to
                     await GenerateBiometricSyncCommands(context, fingerVeinTemplates, device.SerialNumber);
                 }
@@ -684,7 +656,7 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all user photos
                 if (userPhotos.Count > 0)
                 {
@@ -712,7 +684,7 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all comparison photos
                 if (comparisonPhotos.Count > 0)
                 {
@@ -740,7 +712,7 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all error logs
                 if (errorLogs.Count > 0)
                 {
@@ -750,7 +722,7 @@ namespace BioTime.Api.Controllers
             else if (table.ToUpper() == "FINGERTMP")
             {
                 var fingerprintTemplates = new List<FingerprintTemplate>();
-                
+
                 // First, collect all unique PINs to query users in bulk
                 var allPins = new HashSet<string>();
                 foreach (var line in lines)
@@ -766,11 +738,11 @@ namespace BioTime.Api.Controllers
                         }
                     }
                 }
-                
+
                 // Query users in bulk
                 var users = await context.Users.Where(u => allPins.Contains(u.Pin)).ToListAsync();
                 var userLookup = users.ToDictionary(u => u.Pin);
-                
+
                 // Process each line and create fingerprint templates
                 foreach (var line in lines)
                 {
@@ -821,12 +793,12 @@ namespace BioTime.Api.Controllers
                         recordsProcessed++;
                     }
                 }
-                
+
                 // Bulk insert all fingerprint templates
                 if (fingerprintTemplates.Count > 0)
                 {
                     context.FingerprintTemplates.AddRange(fingerprintTemplates);
-                    
+
                     // Generate sync commands for all devices the users have access to
                     await GenerateBiometricSyncCommands(context, fingerprintTemplates, device.SerialNumber);
                 }
@@ -916,8 +888,8 @@ namespace BioTime.Api.Controllers
 
             // Get all devices in these areas (excluding the source device)
             var devicesToUpdate = await context.Devices
-                .Where(d => d.AreaId.HasValue && 
-                           userAreaIds.Contains(d.AreaId.Value) && 
+                .Where(d => d.AreaId.HasValue &&
+                           userAreaIds.Contains(d.AreaId.Value) &&
                            d.SerialNumber != sourceDeviceSerialNumber)
                 .ToListAsync();
 
@@ -940,7 +912,7 @@ namespace BioTime.Api.Controllers
                     if (userPins.TryGetValue(template.UserId, out string? pin) && !string.IsNullOrEmpty(pin))
                     {
                         string commandText = $"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={pin}\tFID={template.FingerIndex}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
-                        
+
                         commands.Add(new ServerCommand
                         {
                             DeviceSerialNumber = device.SerialNumber,
@@ -988,8 +960,8 @@ namespace BioTime.Api.Controllers
 
             // Get all devices in these areas (excluding the source device)
             var devicesToUpdate = await context.Devices
-                .Where(d => d.AreaId.HasValue && 
-                           userAreaIds.Contains(d.AreaId.Value) && 
+                .Where(d => d.AreaId.HasValue &&
+                           userAreaIds.Contains(d.AreaId.Value) &&
                            d.SerialNumber != sourceDeviceSerialNumber)
                 .ToListAsync();
 
@@ -1007,7 +979,7 @@ namespace BioTime.Api.Controllers
                     if (!string.IsNullOrEmpty(template.Pin))
                     {
                         string commandText = $"C:{commandIdCounter++}:DATA UPDATE FACE PIN={template.Pin}\tFID={template.FID}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
-                        
+
                         commands.Add(new ServerCommand
                         {
                             DeviceSerialNumber = device.SerialNumber,
@@ -1055,8 +1027,8 @@ namespace BioTime.Api.Controllers
 
             // Get all devices in these areas (excluding the source device)
             var devicesToUpdate = await context.Devices
-                .Where(d => d.AreaId.HasValue && 
-                           userAreaIds.Contains(d.AreaId.Value) && 
+                .Where(d => d.AreaId.HasValue &&
+                           userAreaIds.Contains(d.AreaId.Value) &&
                            d.SerialNumber != sourceDeviceSerialNumber)
                 .ToListAsync();
 
@@ -1074,7 +1046,7 @@ namespace BioTime.Api.Controllers
                     if (!string.IsNullOrEmpty(template.Pin))
                     {
                         string commandText = $"C:{commandIdCounter++}:DATA UPDATE FVEIN PIN={template.Pin}\tFID={template.FID}\tIndex={template.Index}\tSize={template.Size}\tValid={template.Valid}\tTmp={template.Template}";
-                        
+
                         commands.Add(new ServerCommand
                         {
                             DeviceSerialNumber = device.SerialNumber,
@@ -1122,8 +1094,8 @@ namespace BioTime.Api.Controllers
 
             // Get all devices in these areas (excluding the source device)
             var devicesToUpdate = await context.Devices
-                .Where(d => d.AreaId.HasValue && 
-                           userAreaIds.Contains(d.AreaId.Value) && 
+                .Where(d => d.AreaId.HasValue &&
+                           userAreaIds.Contains(d.AreaId.Value) &&
                            d.SerialNumber != sourceDeviceSerialNumber)
                 .ToListAsync();
 
@@ -1141,7 +1113,7 @@ namespace BioTime.Api.Controllers
                     if (!string.IsNullOrEmpty(template.Pin))
                     {
                         string commandText = $"C:{commandIdCounter++}:DATA UPDATE BIODATA Pin={template.Pin}\tNo={template.No}\tIndex={template.Index}\tValid={template.Valid}\tDuress={template.Duress}\tType={template.Type}\tMajorVer={template.MajorVer}\tMinorVer={template.MinorVer}\tFormat={template.Format}\tTmp={template.Template}";
-                        
+
                         commands.Add(new ServerCommand
                         {
                             DeviceSerialNumber = device.SerialNumber,
