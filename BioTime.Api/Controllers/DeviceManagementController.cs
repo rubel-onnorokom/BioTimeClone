@@ -1,12 +1,13 @@
-using BioTime.Data;
-using BioTime.Data.Models;
-using BioTime.Api.Dtos;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
-using System;
+using BioTime.Api.Dtos;
+using BioTime.Data;
+using BioTime.Data.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BioTime.Api.Controllers
 {
@@ -61,7 +62,7 @@ namespace BioTime.Api.Controllers
 
             // Users to remove (had access before but don't have access after)
             var usersToRemove = previousUserIds.Except(newUserIds).ToList();
-            
+
             // Users to add (don't have access before but will have access after)
             var usersToAdd = newUserIds.Except(previousUserIds).ToList();
 
@@ -221,7 +222,7 @@ namespace BioTime.Api.Controllers
             {
                 _context.ServerCommands.AddRange(commands);
                 await _context.SaveChangesAsync();
-                
+
                 return Ok($"Device area updated. Queued {commands.Count} commands to sync user access for {usersToAdd.Count} new users and remove access for {usersToRemove.Count} users.");
             }
 
@@ -260,7 +261,7 @@ namespace BioTime.Api.Controllers
                 if (user != null)
                 {
                     string commandText = $"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}";
-                    
+
                     commands.Add(new ServerCommand
                     {
                         DeviceSerialNumber = serialNumber,
@@ -715,7 +716,7 @@ namespace BioTime.Api.Controllers
 
             return Ok(new { PendingCommands = pendingCount });
         }
-        
+
         [HttpDelete("{serialNumber}/clear-commands")]
         public async Task<IActionResult> ClearDeviceCommands(string serialNumber)
         {
@@ -728,10 +729,10 @@ namespace BioTime.Api.Controllers
             {
                 _context.ServerCommands.RemoveRange(commands);
                 await _context.SaveChangesAsync();
-                
+
                 return Ok($"Successfully deleted {commands.Count} command(s) for device {serialNumber}.");
             }
-            
+
             return Ok($"No commands found for device {serialNumber}.");
         }
 
@@ -762,20 +763,14 @@ namespace BioTime.Api.Controllers
                 return Ok("No users found for this device's area.");
             }
 
-            var commands = new List<ServerCommand>();
             long commandIdCounter = DateTime.UtcNow.Ticks;
-
+            var commandText = new StringBuilder();
             foreach (var user in usersToSync)
             {
                 if (user == null) continue;
 
                 // Sync user information
-                string commandText = $"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}";
-                commands.Add(new ServerCommand
-                {
-                    DeviceSerialNumber = serialNumber,
-                    CommandText = commandText
-                });
+                commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}");
 
                 // Sync fingerprint templates for this user
                 var fingerprintTemplates = await _context.FingerprintTemplates
@@ -783,12 +778,7 @@ namespace BioTime.Api.Controllers
                     .ToListAsync();
                 foreach (var template in fingerprintTemplates)
                 {
-                    commandText = $"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={template.FingerIndex}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
-                    commands.Add(new ServerCommand
-                    {
-                        DeviceSerialNumber = serialNumber,
-                        CommandText = commandText
-                    });
+                    commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={template.FingerIndex}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}");
                 }
 
                 // Sync face templates for this user
@@ -797,12 +787,7 @@ namespace BioTime.Api.Controllers
                     .ToListAsync();
                 foreach (var template in faceTemplates)
                 {
-                    commandText = $"C:{commandIdCounter++}:DATA UPDATE FACE PIN={user.Pin}\tFID={template.FID}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}";
-                    commands.Add(new ServerCommand
-                    {
-                        DeviceSerialNumber = serialNumber,
-                        CommandText = commandText
-                    });
+                    commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE FACE PIN={user.Pin}\tFID={template.FID}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}");
                 }
 
                 // Sync finger vein templates for this user
@@ -811,12 +796,7 @@ namespace BioTime.Api.Controllers
                     .ToListAsync();
                 foreach (var template in fingerVeinTemplates)
                 {
-                    commandText = $"C:{commandIdCounter++}:DATA UPDATE FVEIN PIN={user.Pin}\tFID={template.FID}\tIndex={template.Index}\tSize={template.Size}\tValid={template.Valid}\tTmp={template.Template}";
-                    commands.Add(new ServerCommand
-                    {
-                        DeviceSerialNumber = serialNumber,
-                        CommandText = commandText
-                    });
+                    commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE FVEIN PIN={user.Pin}\tFID={template.FID}\tIndex={template.Index}\tSize={template.Size}\tValid={template.Valid}\tTmp={template.Template}");
                 }
 
                 // Sync unified templates for this user
@@ -825,19 +805,23 @@ namespace BioTime.Api.Controllers
                     .ToListAsync();
                 foreach (var template in unifiedTemplates)
                 {
-                    commandText = $"C:{commandIdCounter++}:DATA UPDATE BIODATA Pin={user.Pin}\tNo={template.No}\tIndex={template.Index}\tValid={template.Valid}\tDuress={template.Duress}\tType={template.Type}\tMajorVer={template.MajorVer}\tMinorVer={template.MinorVer}\tFormat={template.Format}\tTmp={template.Template}";
-                    commands.Add(new ServerCommand
-                    {
-                        DeviceSerialNumber = serialNumber,
-                        CommandText = commandText
-                    });
+                    commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE BIODATA Pin={user.Pin}\tNo={template.No}\tIndex={template.Index}\tValid={template.Valid}\tDuress={template.Duress}\tType={template.Type}\tMajorVer={template.MajorVer}\tMinorVer={template.MinorVer}\tFormat={template.Format}\tTmp={template.Template}");
                 }
             }
 
-            _context.ServerCommands.AddRange(commands);
-            await _context.SaveChangesAsync();
+            if (commandText.Length > 0)
+            {
+                var command = new ServerCommand
+                {
+                    DeviceSerialNumber = serialNumber,
+                    CommandText = commandText.ToString().Trim()
+                };
 
-            return Ok($"All data sync commands have been queued for device {serialNumber}. Total commands: {commands.Count}.");
+                _context.ServerCommands.Add(command);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok($"All data sync commands have been queued for device {serialNumber}.");
         }
     }
 }
