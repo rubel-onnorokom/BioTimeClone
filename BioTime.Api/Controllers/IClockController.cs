@@ -164,12 +164,12 @@ namespace BioTime.Api.Controllers
             string commandTextCombined = string.Join("\n", commands.Select(c => c.CommandText));
 
             _context.ServerCommands.RemoveRange(commands);
+            await _context.SaveChangesAsync();
 
-            if (string.IsNullOrEmpty(commandTextCombined))
+            if (string.IsNullOrEmpty(commandTextCombined) == false && commandTextCombined.Length > 0)
             {
                 return Content(commandTextCombined ?? "", "text/plain");
             }
-            await _context.SaveChangesAsync();
 
             return Content("OK", "text/plain");
         }
