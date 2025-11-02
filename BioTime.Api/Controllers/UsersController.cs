@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System;
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
+using System.Text;
 
 namespace BioTime.Api.Controllers
 {
@@ -161,6 +162,34 @@ namespace BioTime.Api.Controllers
                         DeviceSerialNumber = device.SerialNumber,
                         CommandText = commandText
                     });
+
+                    var fingerprintTemplates = await _context.FingerprintTemplates.Where(ft => ft.UserId == user.Id).ToListAsync();
+                    foreach (var template in fingerprintTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA DELETE FINGERTMP PIN={user.Pin}\tFID={template.FingerIndex}";
+                        commands.Add(new ServerCommand { DeviceSerialNumber = device.SerialNumber, CommandText = commandText });
+                    }
+
+                    var faceTemplates = await _context.FaceTemplates.Where(ft => ft.Pin == user.Pin).ToListAsync();
+                    foreach (var template in faceTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA DELETE FACE PIN={user.Pin}\tFID={template.FID}";
+                        commands.Add(new ServerCommand { DeviceSerialNumber = device.SerialNumber, CommandText = commandText });
+                    }
+
+                    var fingerVeinTemplates = await _context.FingerVeinTemplates.Where(fvt => fvt.Pin == user.Pin).ToListAsync();
+                    foreach (var template in fingerVeinTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA DELETE FVEIN PIN={user.Pin}\tFID={template.FID}";
+                        commands.Add(new ServerCommand { DeviceSerialNumber = device.SerialNumber, CommandText = commandText });
+                    }
+
+                    var unifiedTemplates = await _context.UnifiedTemplates.Where(ut => ut.Pin == user.Pin).ToListAsync();
+                    foreach (var template in unifiedTemplates)
+                    {
+                        commandText = $"C:{commandIdCounter++}:DATA DELETE BIODATA Pin={user.Pin}\tNo={template.No}";
+                        commands.Add(new ServerCommand { DeviceSerialNumber = device.SerialNumber, CommandText = commandText });
+                    }
                 }
             }
 
@@ -173,12 +202,35 @@ namespace BioTime.Api.Controllers
 
                 foreach (var device in devicesToAddTo)
                 {
-                    string commandText = $"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}";
-                    commands.Add(new ServerCommand
+                    var commandText = new StringBuilder();
+                    commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}");
+
+                    var fingerprintTemplates = await _context.FingerprintTemplates.Where(ft => ft.UserId == user.Id).ToListAsync();
+                    foreach (var template in fingerprintTemplates)
                     {
-                        DeviceSerialNumber = device.SerialNumber,
-                        CommandText = commandText
-                    });
+                        commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={template.FingerIndex}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}");
+                    }
+
+                    var faceTemplates = await _context.FaceTemplates.Where(ft => ft.Pin == user.Pin).ToListAsync();
+                    foreach (var template in faceTemplates)
+                    {
+                        commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE FACE PIN={user.Pin}\tFID={template.FID}\tSize={template.Size}\tValid={template.Valid}\tTMP={template.Template}");
+                    }
+
+                    var fingerVeinTemplates = await _context.FingerVeinTemplates.Where(fvt => fvt.Pin == user.Pin).ToListAsync();
+                    foreach (var template in fingerVeinTemplates)
+                    {
+                        commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE FVEIN PIN={user.Pin}\tFID={template.FID}\tIndex={template.Index}\tSize={template.Size}\tValid={template.Valid}\tTmp={template.Template}");
+                    }
+
+                    var unifiedTemplates = await _context.UnifiedTemplates.Where(ut => ut.Pin == user.Pin).ToListAsync();
+                    foreach (var template in unifiedTemplates)
+                    {
+                        commandText.AppendLine($"C:{commandIdCounter++}:DATA UPDATE BIODATA Pin={user.Pin}\tNo={template.No}\tIndex={template.Index}\tValid={template.Valid}\tDuress={template.Duress}\tType={template.Type}\tMajorVer={template.MajorVer}\tMinorVer={template.MinorVer}\tFormat={template.Format}\tTmp={template.Template}");
+                    }
+
+                    if (commandText.Length > 0)
+                        commands.Add(new ServerCommand { DeviceSerialNumber = device.SerialNumber, CommandText = commandText.ToString() });
                 }
             }
 
@@ -193,11 +245,7 @@ namespace BioTime.Api.Controllers
                 foreach (var device in devicesToUpdate)
                 {
                     string commandText = $"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}";
-                    commands.Add(new ServerCommand
-                    {
-                        DeviceSerialNumber = device.SerialNumber,
-                        CommandText = commandText
-                    });
+                    commands.Add(new ServerCommand { DeviceSerialNumber = device.SerialNumber, CommandText = commandText });
                 }
             }
 
@@ -251,12 +299,35 @@ namespace BioTime.Api.Controllers
             // Queue a delete command for each relevant device
             foreach (var device in devicesToUpdate)
             {
-                string commandText = $"C:{commandIdCounter++}:DATA DELETE USERINFO PIN={user.Pin}";
-                commands.Add(new ServerCommand
+                var commandText = new StringBuilder();
+                commandText.AppendLine($"C:{commandIdCounter++}:DATA DELETE USERINFO PIN={user.Pin}");
+
+                var fingerprintTemplates = await _context.FingerprintTemplates.Where(ft => ft.UserId == user.Id).ToListAsync();
+                foreach (var template in fingerprintTemplates)
                 {
-                    DeviceSerialNumber = device.SerialNumber,
-                    CommandText = commandText
-                });
+                    commandText.AppendLine($"C:{commandIdCounter++}:DATA DELETE FINGERTMP PIN={user.Pin}\tFID={template.FingerIndex}");
+                }
+
+                var faceTemplates = await _context.FaceTemplates.Where(ft => ft.Pin == user.Pin).ToListAsync();
+                foreach (var template in faceTemplates)
+                {
+                    commandText.AppendLine($"C:{commandIdCounter++}:DATA DELETE FACE PIN={user.Pin}\tFID={template.FID}");
+                }
+
+                var fingerVeinTemplates = await _context.FingerVeinTemplates.Where(fvt => fvt.Pin == user.Pin).ToListAsync();
+                foreach (var template in fingerVeinTemplates)
+                {
+                    commandText.AppendLine($"C:{commandIdCounter++}:DATA DELETE FVEIN PIN={user.Pin}\tFID={template.FID}");
+                }
+
+                var unifiedTemplates = await _context.UnifiedTemplates.Where(ut => ut.Pin == user.Pin).ToListAsync();
+                foreach (var template in unifiedTemplates)
+                {
+                    commandText.AppendLine($"C:{commandIdCounter++}:DATA DELETE BIODATA Pin={user.Pin}\tNo={template.No}");
+                }
+
+                if (commandText.Length > 0)
+                    commands.Add(new ServerCommand { DeviceSerialNumber = device.SerialNumber, CommandText = commandText.ToString() });
             }
 
             if (commands.Any())
