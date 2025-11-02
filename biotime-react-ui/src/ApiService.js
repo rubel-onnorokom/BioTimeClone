@@ -77,8 +77,7 @@ export const deleteArea = (id) => apiClient.delete(`/api/areas/${id}`);
 
 export const getUsers = () => apiClient.get('/api/users');
 export const createUser = (user) => apiClient.post('/api/users', user);
-export const updateUser = (pin, user) => apiClient.put(`/api/users/${pin}`, user);
-export const updateUserAreas = (pin, areaIds) => apiClient.put(`/api/users/${pin}/areas`, { areaIds });
+export const updateUser = (pin, userDto) => apiClient.put(`/api/users/${pin}`, userDto);
 export const getUserAttendanceLogs = (pin) => apiClient.get(`/api/users/${pin}/attendance-logs`);
 export const getUserFingerprints = (pin) => apiClient.get(`/api/users/${pin}/fingerprints`);
 export const getUserFaceTemplates = (pin) => apiClient.get(`/api/users/${pin}/facetemplates`);

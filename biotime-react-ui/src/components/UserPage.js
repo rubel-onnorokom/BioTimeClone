@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getUsers, createUser, updateUser, updateUserAreas, deleteUser, getAreas, getUserAttendanceLogs } from '../ApiService';
+import { getUsers, createUser, updateUser, deleteUser, getAreas, getUserAttendanceLogs } from '../ApiService';
 import { Card, Button, Form, Alert, Row, Col, Badge, Table } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
@@ -89,26 +89,24 @@ const UserPage = () => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            // First, update the user's basic information
             const userDto = {
-                id: editingUser.id,
-                pin,
                 name,
                 password,
                 privilege,
                 cardNumber,
-                // Note: areaIds are not included here as they are handled separately
+                areaIds: selectedAreaIds.map(id => parseInt(id, 10)),
             };
-            
-            // Update basic user info
+
             await updateUser(pin, userDto);
-            
-            // Then update the user's areas using the dedicated endpoint
-            await updateUserAreas(pin, selectedAreaIds.map(id => parseInt(id, 10)));
-            
+
             setMessage('User updated successfully!');
             setEditingUser(null);
-            setPin(''); setName(''); setPassword(''); setPrivilege(0); setCardNumber(''); setSelectedAreaIds([]);
+            setPin('');
+            setName('');
+            setPassword('');
+            setPrivilege(0);
+            setCardNumber('');
+            setSelectedAreaIds([]);
             fetchUsers(); // Refresh the list
         } catch (error) {
             setMessage(`Error updating user: ${error.response ? error.response.data : error.message}`);

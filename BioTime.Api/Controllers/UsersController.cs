@@ -1,3 +1,4 @@
+
 using BioTime.Data;
 using BioTime.Data.Models;
 using BioTime.Api.Dtos;
@@ -122,35 +123,108 @@ namespace BioTime.Api.Controllers
         }
 
         [HttpPut("{pin}")]
-        public async Task<IActionResult> UpdateUser(string pin, [FromBody] User updatedUser)
+        public async Task<IActionResult> UpdateUser(string pin, [FromBody] UserUpdateDto dto)
         {
-            if (pin != updatedUser.Pin)
+            var user = await _context.Users.Include(u => u.UserAreas).FirstOrDefaultAsync(u => u.Pin == pin);
+            if (user == null)
             {
-                return BadRequest("User PIN mismatch.");
+                return NotFound("User not found.");
             }
 
-            _context.Entry(updatedUser).State = EntityState.Modified;
+            // Update user properties
+            user.Name = dto.Name;
+            user.Password = dto.Password;
+            user.Privilege = dto.Privilege;
+            user.CardNumber = dto.CardNumber;
 
-            try
+            var currentAreaIds = user.UserAreas.Select(ua => ua.AreaId).ToHashSet();
+            var newAreaIds = dto.AreaIds.ToHashSet();
+
+            var removedAreaIds = currentAreaIds.Except(newAreaIds).ToList();
+            var addedAreaIds = newAreaIds.Except(currentAreaIds).ToList();
+
+            var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            // 1. Handle removed areas -> Queue DELETE commands
+            if (removedAreaIds.Any())
             {
-                await _context.SaveChangesAsync();
+                var devicesToRemoveFrom = await _context.Devices
+                    .Where(d => d.AreaId.HasValue && removedAreaIds.Contains(d.AreaId.Value))
+                    .ToListAsync();
+
+                foreach (var device in devicesToRemoveFrom)
+                {
+                    string commandText = $"C:{commandIdCounter++}:DATA DELETE USERINFO PIN={user.Pin}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = device.SerialNumber,
+                        CommandText = commandText
+                    });
+                }
             }
-            catch (DbUpdateConcurrencyException)
+
+            // 2. Handle added areas -> Queue UPDATE commands
+            if (addedAreaIds.Any())
             {
-                if (!_context.Users.Any(e => e.Pin == pin))
+                var devicesToAddTo = await _context.Devices
+                    .Where(d => d.AreaId.HasValue && addedAreaIds.Contains(d.AreaId.Value))
+                    .ToListAsync();
+
+                foreach (var device in devicesToAddTo)
                 {
-                    return NotFound("User not found.");
-                }
-                else
-                {
-                    throw;
+                    string commandText = $"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = device.SerialNumber,
+                        CommandText = commandText
+                    });
                 }
             }
-            var updatedUserResult = await _context.Users
+
+            // 3. Handle existing areas -> Queue UPDATE commands for basic info changes
+            var existingAreaIds = currentAreaIds.Intersect(newAreaIds).ToList();
+            if (existingAreaIds.Any())
+            {
+                var devicesToUpdate = await _context.Devices
+                    .Where(d => d.AreaId.HasValue && existingAreaIds.Contains(d.AreaId.Value))
+                    .ToListAsync();
+
+                foreach (var device in devicesToUpdate)
+                {
+                    string commandText = $"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}";
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = device.SerialNumber,
+                        CommandText = commandText
+                    });
+                }
+            }
+
+            // 4. Update the database links
+            user.UserAreas.RemoveAll(ua => removedAreaIds.Contains(ua.AreaId));
+            foreach (var areaId in addedAreaIds)
+            {
+                user.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = areaId });
+            }
+
+            if (commands.Any())
+            {
+                _context.ServerCommands.AddRange(commands);
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Return the updated user with relationships
+            var updatedUser = await _context.Users
                 .Include(u => u.UserAreas)
                 .FirstOrDefaultAsync(u => u.Pin == pin);
 
-            return Ok(updatedUserResult);
+            return Ok(new
+            {
+                Message = $"User {pin} updated successfully. Queued {commands.Count} commands.",
+                User = updatedUser
+            });
         }
 
         [HttpDelete("{pin}")]
@@ -171,9 +245,10 @@ namespace BioTime.Api.Controllers
                 .Where(d => d.AreaId.HasValue && areaIds.Contains(d.AreaId.Value))
                 .ToListAsync();
 
-            // Queue a delete command for each relevant device
-            long commandIdCounter = DateTime.UtcNow.Ticks;
             var commands = new List<ServerCommand>();
+            long commandIdCounter = DateTime.UtcNow.Ticks;
+
+            // Queue a delete command for each relevant device
             foreach (var device in devicesToUpdate)
             {
                 string commandText = $"C:{commandIdCounter++}:DATA DELETE USERINFO PIN={user.Pin}";
@@ -195,102 +270,6 @@ namespace BioTime.Api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok($"User {pin} has been deleted from the server and delete commands have been queued for {devicesToUpdate.Count} device(s).");
-        }
-
-        [HttpPost("{pin}/areas")]
-        public async Task<IActionResult> AssignUserToArea(string pin, [FromBody] UserAreaDto dto)
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Pin == pin);
-            if (user == null)
-            {
-                return NotFound("User not found.");
-            }
-            var area = await _context.Areas.FindAsync(dto.AreaId);
-            if (area == null)
-            {
-                return NotFound("Area not found.");
-            }
-            var exists = await _context.UserAreas.AnyAsync(ua => ua.UserId == user.Id && ua.AreaId == area.Id);
-            if (exists)
-            {
-                return Ok("User is already assigned to this area.");
-            }
-            var userArea = new UserArea { UserId = user.Id, AreaId = area.Id };
-            _context.UserAreas.Add(userArea);
-            await _context.SaveChangesAsync();
-            return Ok("User successfully assigned to area.");
-        }
-
-        [HttpPut("{pin}/areas")]
-        public async Task<IActionResult> UpdateUserAreas(string pin, [FromBody] UserAreaUpdateDto dto)
-        {
-            var user = await _context.Users.Include(u => u.UserAreas).FirstOrDefaultAsync(u => u.Pin == pin);
-            if (user == null)
-            {
-                return NotFound("User not found.");
-            }
-
-            var currentAreaIds = user.UserAreas.Select(ua => ua.AreaId).ToHashSet();
-            var newAreaIds = dto.AreaIds.ToHashSet();
-
-            var removedAreaIds = currentAreaIds.Except(newAreaIds).ToList();
-            var addedAreaIds = newAreaIds.Except(currentAreaIds).ToList();
-
-            var commands = new List<ServerCommand>();
-            long commandIdCounter = DateTime.UtcNow.Ticks;
-
-            // 1. Handle removed areas -> Queue DELETE commands
-            if (removedAreaIds.Any())
-            {
-                var devicesToRemoveFrom = await _context.Devices
-                    .Where(d => d.AreaId.HasValue && removedAreaIds.Contains(d.AreaId.Value))
-                    .ToListAsync();
-
-                foreach (var device in devicesToRemoveFrom)
-                {
-                    string commandText = $"C:{commandIdCounter++}:DATA DELETE USERINFO PIN={user.Pin}";
-                    commands.Add(new ServerCommand { DeviceSerialNumber = device.SerialNumber, CommandText = commandText });
-                }
-            }
-
-            // 2. Handle added areas -> Queue UPDATE commands
-            if (addedAreaIds.Any())
-            {
-                var devicesToAddTo = await _context.Devices
-                    .Where(d => d.AreaId.HasValue && addedAreaIds.Contains(d.AreaId.Value))
-                    .ToListAsync();
-
-                foreach (var device in devicesToAddTo)
-                {
-                    string commandText = $"C:{commandIdCounter++}:DATA UPDATE USERINFO PIN={user.Pin}\tName={user.Name ?? ""}\tPri={user.Privilege}\tCard={user.CardNumber ?? ""}";
-                    commands.Add(new ServerCommand { DeviceSerialNumber = device.SerialNumber, CommandText = commandText });
-                }
-            }
-
-            // 3. Update the database links
-            user.UserAreas.RemoveAll(ua => removedAreaIds.Contains(ua.AreaId));
-            foreach (var areaId in addedAreaIds)
-            {
-                user.UserAreas.Add(new UserArea { UserId = user.Id, AreaId = areaId });
-            }
-
-            if (commands.Any())
-            {
-                _context.ServerCommands.AddRange(commands);
-            }
-
-            await _context.SaveChangesAsync();
-
-            // Return the updated user with relationships
-            var updatedUser = await _context.Users
-                .Include(u => u.UserAreas)
-                .FirstOrDefaultAsync(u => u.Pin == pin);
-
-            return Ok(new
-            {
-                Message = $"User {pin} areas updated. Queued {commands.Count} commands.",
-                User = updatedUser
-            });
         }
 
         [HttpGet("{pin}/attendance-logs")]
@@ -838,17 +817,17 @@ namespace BioTime.Api.Controllers
                 {
                     var firstPunch = dailyLogs.Min(al => al.Timestamp);
                     var lastPunch = dailyLogs.Max(al => al.Timestamp);
-                    reportEntry.InTime = firstPunch.ToString("hh\\:mm\\:ss tt", CultureInfo.InvariantCulture); // Format to 12-hour string
+                    reportEntry.InTime = firstPunch.ToString("hh:mm:ss tt", CultureInfo.InvariantCulture); // Format to 12-hour string
                     if (firstPunch != lastPunch)
                     {
-                        reportEntry.OutTime = lastPunch.ToString("hh\\:mm\\:ss tt", CultureInfo.InvariantCulture); // Format to 12-hour string
+                        reportEntry.OutTime = lastPunch.ToString("hh:mm:ss tt", CultureInfo.InvariantCulture); // Format to 12-hour string
                         TimeSpan workingHours = lastPunch - firstPunch;
-                        reportEntry.WorkingHours = workingHours.ToString("hh\\:mm", CultureInfo.InvariantCulture); // Format to HH:mm
+                        reportEntry.WorkingHours = workingHours.ToString("hh:mm", CultureInfo.InvariantCulture); // Format to HH:mm
                     }
                     else
                     {
                         reportEntry.OutTime = null;
-                        reportEntry.WorkingHours = TimeSpan.Zero.ToString("hh\\:mm", CultureInfo.InvariantCulture); // "00:00"
+                        reportEntry.WorkingHours = TimeSpan.Zero.ToString("hh:mm", CultureInfo.InvariantCulture); // "00:00"
                     }
                     reportEntry.Zone = dailyLogs.FirstOrDefault()?.Device?.Area?.Name;
                 }
@@ -866,7 +845,7 @@ namespace BioTime.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(entry.WorkingHours))
                 {
-                    TimeSpan entryWorkingHours = TimeSpan.ParseExact(entry.WorkingHours, "hh\\:mm", CultureInfo.InvariantCulture);
+                    TimeSpan entryWorkingHours = TimeSpan.ParseExact(entry.WorkingHours, "hh:mm", CultureInfo.InvariantCulture);
                     totalWorkingHours = totalWorkingHours.Add(entryWorkingHours);
                 }
                 if (entry.IsLateEntry)
