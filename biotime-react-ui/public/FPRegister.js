@@ -236,6 +236,7 @@ class FPDriver {
             }
         }
         xhr.onerror = function (res) {
+            parent.dealFPDriverResponse({ ret: -2001, data: null });
         }
         xhr.send();
     }
@@ -1800,8 +1801,8 @@ function checkDriver(isFPLogin) {
                     $("#id_fp_identify").show();
                 }
             }
+            submitRegister();
         });
-        submitRegister();
     }
 }
 $(function () {

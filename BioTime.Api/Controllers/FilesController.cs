@@ -9,7 +9,6 @@ namespace BioTime.Api.Controllers
 {
     [Route("[controller]")]
     [ApiController]
-    [Authorize]
     public class FilesController : ControllerBase
     {
         private readonly IWebHostEnvironment _hostingEnvironment;
