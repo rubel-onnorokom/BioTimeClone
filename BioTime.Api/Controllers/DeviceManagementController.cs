@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BioTime.Api.Dtos;
 using BioTime.Data;
 using BioTime.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,7 @@ namespace BioTime.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class DeviceManagementController : ControllerBase
     {
         private readonly BioTimeDbContext _context;

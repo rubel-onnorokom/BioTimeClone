@@ -16,6 +16,7 @@ namespace BioTime.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class UsersController : ControllerBase
     {
         private readonly BioTimeDbContext _context;

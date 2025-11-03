@@ -1,5 +1,6 @@
 using BioTime.Data;
 using BioTime.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace BioTime.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class OperationLogsController : ControllerBase
     {
         private readonly BioTimeDbContext _context;

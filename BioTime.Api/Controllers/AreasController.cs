@@ -1,5 +1,6 @@
 using BioTime.Data;
 using BioTime.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ namespace BioTime.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class AreasController : ControllerBase
     {
         private readonly BioTimeDbContext _context;
