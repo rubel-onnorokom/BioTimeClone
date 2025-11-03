@@ -20,7 +20,7 @@ namespace BioTime.Data.Models
         public int Delay { get; set; } = 10;
         public string TransTimes { get; set; } = "00:00;14:00";
         public int TransInterval { get; set; } = 1;
-        public string TransFlag { get; set; } = "1111000000";
+        public string TransFlag { get; set; } = "1111111111";
         public int Realtime { get; set; } = 1;
         public int TimeZone { get; set; } = 6;
 

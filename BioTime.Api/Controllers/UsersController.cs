@@ -16,7 +16,6 @@ namespace BioTime.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class UsersController : ControllerBase
     {
         private readonly BioTimeDbContext _context;
@@ -1371,28 +1370,17 @@ namespace BioTime.Api.Controllers
 
                 foreach (var device in devices)
                 {
+                    var cmd = new StringBuilder();
                     foreach (var fp in fingerprintsToDelete)
                     {
-                        string cmd = $"C:{commandIdCounter++}:DATA DELETE FINGERTMP PIN={user.Pin}\tFID={fp.FingerIndex}";
-                        commands.Add(new ServerCommand
-                        {
-                            DeviceSerialNumber = device.SerialNumber,
-                            CommandText = cmd
-                        });
+                        cmd.AppendLine($"C:{commandIdCounter++}:DATA DELETE FINGERTMP PIN={user.Pin}\tFID={fp.FingerIndex}");
                     }
+                    commands.Add(new ServerCommand
+                    {
+                        DeviceSerialNumber = device.SerialNumber,
+                        CommandText = cmd.ToString()
+                    });
                 }
-
-                if (commands.Any())
-                {
-                    _context.ServerCommands.AddRange(commands);
-                    await _context.SaveChangesAsync();
-                }
-
-                return Ok(new
-                {
-                    message = $"Deleted {fingerprintsToDelete.Count} fingerprint(s) for user {pin}.",
-                    queuedCommands = commands.Count
-                });
             }
 
             // ===== CREATE/UPDATE MODE =====
@@ -1439,15 +1427,16 @@ namespace BioTime.Api.Controllers
 
             foreach (var device in devicesForCreate)
             {
+                var cmd = new StringBuilder();
                 foreach (var template in request.Templates)
                 {
-                    string cmd = $"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={template.No}\tSize={template.Length ?? 0}\tValid=1\tTMP={template.Template ?? ""}";
-                    commands.Add(new ServerCommand
-                    {
-                        DeviceSerialNumber = device.SerialNumber,
-                        CommandText = cmd
-                    });
+                    cmd.AppendLine($"C:{commandIdCounter++}:DATA UPDATE FINGERTMP PIN={user.Pin}\tFID={template.No}\tSize={template.Length ?? 0}\tValid=1\tTMP={template.Template ?? ""}");
                 }
+                commands.Add(new ServerCommand
+                {
+                    DeviceSerialNumber = device.SerialNumber,
+                    CommandText = cmd.ToString()
+                });
             }
 
             if (commands.Any())
