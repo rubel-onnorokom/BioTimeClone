@@ -73,7 +73,6 @@ namespace BioTime.Api.Controllers
             return BadRequest("Invalid type.");
         }
 
-        // GET /iclock/cdata?SN=...
         [HttpGet("cdata")]
         public async Task<IActionResult> GetDeviceConfig([FromQuery] string SN, [FromQuery] string? options, [FromQuery] string? language, [FromQuery] string? pushver, [FromQuery] string? PushOptionsFlag)
         {
@@ -123,7 +122,6 @@ namespace BioTime.Api.Controllers
             return Content(response, "text/plain");
         }
 
-        // GET /iclock/getrequest?SN=...
         [HttpGet("getrequest")]
         public async Task<IActionResult> GetRequest([FromQuery] string SN, [FromQuery] string? INFO)
         {
@@ -154,6 +152,8 @@ namespace BioTime.Api.Controllers
                     device.FaceCount = int.TryParse(parts[8], out int faceCount) ? faceCount : 0;
                     device.SupportedFunctions = parts[9];
                 }
+                await _context.SaveChangesAsync();
+                return Content("OK", "text/plain");
             }
 
             var commands = await _context.ServerCommands
@@ -174,8 +174,6 @@ namespace BioTime.Api.Controllers
             return Content("OK", "text/plain");
         }
 
-        // POST /iclock/devicecmd?SN=...
-
         [HttpPost("devicecmd")]
         public async Task<IActionResult> DeviceCmd([FromQuery] string SN)
         {
@@ -188,23 +186,6 @@ namespace BioTime.Api.Controllers
             var body = await reader.ReadToEndAsync();
 
             return Content("OK", "text/plain");
-        }
-
-        private async Task<int> ProcessLine(string line, Device device, BioTimeDbContext context)
-        {
-            string inferredTable = "UNKNOWN";
-            if (line.StartsWith("USER ")) inferredTable = "USERINFO";
-            else if (line.StartsWith("FP\t")) inferredTable = "FINGERTMP";
-            else if (line.StartsWith("FACE ")) inferredTable = "FACE";
-            else if (line.StartsWith("FVEIN ")) inferredTable = "FVEIN";
-            else if (line.StartsWith("USERPIC ")) inferredTable = "USERPIC";
-            else if (line.StartsWith("BIOPHOTO ")) inferredTable = "BIOPHOTO";
-            else if (line.StartsWith("BIODATA ")) inferredTable = "BIODATA";
-            else if (line.StartsWith("OPLOG ")) inferredTable = "OPERLOG";
-            else if (line.Contains("FP PIN=")) inferredTable = "FINGERTMP";
-            else inferredTable = "OPERLOG"; // Default to OPLOG for unknown prefixes
-
-            return await ProcessDataRecords(inferredTable, new List<string> { line }, device, context);
         }
 
         [HttpPost("cdata")]
@@ -268,6 +249,30 @@ namespace BioTime.Api.Controllers
             }
 
             return Content($"OK: {recordsProcessed}", "text/plain");
+        }
+
+        [HttpGet("ping")]
+        public IActionResult Ping([FromQuery] string SN)
+        {
+            return Content("OK", "text/plain");
+        }
+
+        #region Helper Methods
+        private async Task<int> ProcessLine(string line, Device device, BioTimeDbContext context)
+        {
+            string inferredTable = "UNKNOWN";
+            if (line.StartsWith("USER ")) inferredTable = "USERINFO";
+            else if (line.StartsWith("FP\t")) inferredTable = "FINGERTMP";
+            else if (line.StartsWith("FACE ")) inferredTable = "FACE";
+            else if (line.StartsWith("FVEIN ")) inferredTable = "FVEIN";
+            else if (line.StartsWith("USERPIC ")) inferredTable = "USERPIC";
+            else if (line.StartsWith("BIOPHOTO ")) inferredTable = "BIOPHOTO";
+            else if (line.StartsWith("BIODATA ")) inferredTable = "BIODATA";
+            else if (line.StartsWith("OPLOG ")) inferredTable = "OPERLOG";
+            else if (line.Contains("FP PIN=")) inferredTable = "FINGERTMP";
+            else inferredTable = "OPERLOG"; // Default to OPLOG for unknown prefixes
+
+            return await ProcessDataRecords(inferredTable, new List<string> { line }, device, context);
         }
 
         private async Task<int> ProcessDataRecords(string table, IEnumerable<string> lines, Device device, BioTimeDbContext context)
@@ -807,70 +812,6 @@ namespace BioTime.Api.Controllers
             return recordsProcessed;
         }
 
-        // This method is kept for potential reuse, but for bulk operations, 
-        // see the updated FINGERTMP handling in ProcessDataRecords method which is more efficient
-        private async Task<int> ProcessFingerprintTemplate(string line, BioTimeDbContext context)
-        {
-            var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            string? pin = null;
-            int fid = -1;
-            int size = 0;
-            int valid = 0;
-            string? template = null;
-
-            foreach (var part in parts)
-            {
-                var kv = part.Split('=', 2);
-                if (kv.Length == 2)
-                {
-                    switch (kv[0])
-                    {
-                        case "PIN":
-                            pin = kv[1];
-                            break;
-                        case "FID":
-                            int.TryParse(kv[1], out fid);
-                            break;
-                        case "Size":
-                            int.TryParse(kv[1], out size);
-                            break;
-                        case "Valid":
-                            int.TryParse(kv[1], out valid);
-                            break;
-                        case "TMP":
-                            template = kv[1];
-                            break;
-                    }
-                }
-            }
-
-            if (!string.IsNullOrEmpty(pin) && !string.IsNullOrEmpty(template))
-            {
-                var user = await context.Users.FirstOrDefaultAsync(u => u.Pin == pin);
-                if (user != null)
-                {
-                    var newTemplate = new FingerprintTemplate
-                    {
-                        UserId = user.Id,
-                        FingerIndex = fid,
-                        Size = size,
-                        Valid = valid,
-                        Template = template
-                    };
-                    context.FingerprintTemplates.Add(newTemplate);
-                    return 1;
-                }
-            }
-
-            return 0;
-        }
-
-        /// <summary>
-        /// Generates sync commands for biometric templates to all devices the users have access to
-        /// </summary>
-        /// <param name="context">Database context</param>
-        /// <param name="templates">Collection of fingerprint templates</param>
-        /// <param name="sourceDeviceSerialNumber">Serial number of the device that sent the data</param>
         private async Task GenerateBiometricSyncCommands(BioTimeDbContext context, List<FingerprintTemplate> templates, string sourceDeviceSerialNumber)
         {
             // Get all unique user IDs from the templates
@@ -929,12 +870,6 @@ namespace BioTime.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Generates sync commands for face templates to all devices the users have access to
-        /// </summary>
-        /// <param name="context">Database context</param>
-        /// <param name="templates">Collection of face templates</param>
-        /// <param name="sourceDeviceSerialNumber">Serial number of the device that sent the data</param>
         private async Task GenerateBiometricSyncCommands(BioTimeDbContext context, List<FaceTemplate> templates, string sourceDeviceSerialNumber)
         {
             // Get all unique PINs from the templates
@@ -996,12 +931,6 @@ namespace BioTime.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Generates sync commands for finger vein templates to all devices the users have access to
-        /// </summary>
-        /// <param name="context">Database context</param>
-        /// <param name="templates">Collection of finger vein templates</param>
-        /// <param name="sourceDeviceSerialNumber">Serial number of the device that sent the data</param>
         private async Task GenerateBiometricSyncCommands(BioTimeDbContext context, List<FingerVeinTemplate> templates, string sourceDeviceSerialNumber)
         {
             // Get all unique PINs from the templates
@@ -1063,12 +992,6 @@ namespace BioTime.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// Generates sync commands for unified templates to all devices the users have access to
-        /// </summary>
-        /// <param name="context">Database context</param>
-        /// <param name="templates">Collection of unified templates</param>
-        /// <param name="sourceDeviceSerialNumber">Serial number of the device that sent the data</param>
         private async Task GenerateBiometricSyncCommands(BioTimeDbContext context, List<UnifiedTemplate> templates, string sourceDeviceSerialNumber)
         {
             // Get all unique PINs from the templates
@@ -1129,13 +1052,6 @@ namespace BioTime.Api.Controllers
                 context.ServerCommands.AddRange(commands);
             }
         }
-
-        // GET /iclock/ping?SN=...
-        [HttpGet("ping")]
-        public IActionResult Ping([FromQuery] string SN)
-        {
-            // This is just a heartbeat. We could update the device's LastSeen timestamp here if needed.
-            return Content("OK", "text/plain");
-        }
+        #endregion
     }
 }
