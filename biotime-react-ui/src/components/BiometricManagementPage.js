@@ -516,6 +516,49 @@ const BiometricManagementPage = () => {
         window.FetchFingerprint(pin);
     };
 
+    const handleHardwareFaceRegistration = async () => {
+        // Check if required dependencies are available
+        if (typeof window.$ === 'undefined') {
+            setMessage('jQuery is required but not loaded properly.');
+            return;
+        }
+        
+        if (typeof window.submitFaceRegister === 'undefined') {
+            setMessage('submitFaceRegister function is not available. Please ensure faceCapture.js is loaded properly.');
+            return;
+        }
+        
+        let faceInput = document.getElementById('id_face');
+        if (!faceInput) {
+            faceInput = document.createElement('input');
+            faceInput.type = 'hidden';
+            faceInput.id = 'id_face';
+            faceInput.name = 'face';
+            faceInput.value = "";
+            document.body.appendChild(faceInput);
+        } else {
+            faceInput.value = "";
+        }
+
+        let faceCountInput = document.getElementById('id_faceCount');
+        if (!faceCountInput) {
+            faceCountInput = document.createElement('input');
+            faceCountInput.type = 'hidden';
+            faceCountInput.id = 'id_faceCount';
+            faceCountInput.name = 'faceCount';
+            faceCountInput.value = "";
+            document.body.appendChild(faceCountInput);
+        } else {
+            faceCountInput.value = "";
+        }
+        
+        
+        // NOW call the existing FetchFingerprint function with the user's pin
+        // This function will fetch existing fingerprints from the backend 
+        // and populate the id_templates field in the required format
+        window.submitFaceRegister();
+    };
+
     if (isLoading) {
         return (
             <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
@@ -620,9 +663,19 @@ const BiometricManagementPage = () => {
                     <Card>
                         <Card.Header className="d-flex justify-content-between align-items-center">
                             Face Templates
-                            <Button variant="primary" size="sm" onClick={handleCreateFaceTemplate}>
-                                Add Face Template
-                            </Button>
+                            <div className="d-flex gap-2">
+                                <Button variant="primary" size="sm" onClick={handleCreateFaceTemplate}>
+                                    Add Face Template
+                                </Button>
+                                <Button 
+                                    variant="success" 
+                                    size="sm" 
+                                    onClick={handleHardwareFaceRegistration}
+                                    className="d-flex align-items-center"
+                                >
+                                    <FaFingerprint className="me-1" /> Enroll
+                                </Button>
+                            </div>
                         </Card.Header>
                         <Card.Body>
                             <div className="table-responsive">

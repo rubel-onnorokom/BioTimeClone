@@ -543,3 +543,31 @@ class Messages_FC {
         "-10010": gettext("faRegister_-10010"),//"Waiting To Capture",//"未开始采集",
     }
 }
+
+function gettext(key) {
+    const translations = {
+        'btn_refreshCamera': 'Refresh Camera',
+        'btn_capture': 'Capture',
+        'btn_confirm': 'Confirm',
+        'btn_cancel': 'Cancel',
+        'btn_closeCamera': 'Close',
+        'please_install_driver_or_start_service': 'Please install driver or start service',
+        'pop_window_title': 'System Notice',
+        'preview': 'Reader not detected',
+        'Download_Driver': 'Download Driver',
+        'faceRegister_face_register': 'Please select a Face to register',
+        'faRegister_0': 'Operate Successfully',
+        'faRegister_-10001': 'Invalid Params',
+        'faRegister_-10002': 'Device Is Connected',
+        'faRegister_-10003': 'Operate Timeout',
+        'faRegister_-10004': 'Device Is Busy',
+        'faRegister_-10005': 'Open Device Failed',
+        'faRegister_-10006': 'Device Is Closed',
+        'faRegister_-10007': 'Unknown Module',
+        'faRegister_-10008': 'Checking Failed',
+        'faRegister_-10009': 'Failed To Close Device',
+        'faRegister_-10010': 'Waiting To Capture',
+        'Ã¥Â½â€œÃ¥â€°ÂÃ¦ÂµÂÃ¨Â§Ë†Ã¥â„¢Â¨Ã¤Â¸ÂÃ¦â€Â¯Ã¦Å’ÂÃ¨Â¯Â¥Ã¥Å Å¸Ã¨Æ’Â½,Ã¨Â¯Â·Ã¥Ââ€¡Ã§ÂºÂ§Ã¦Ë†â€“Ã¦â€ºÂ´Ã¦ÂÂ¢Ã¦ÂµÂÃ¨Â§Ë†Ã¥â„¢Â¨.': 'Current browser does not support this feature, please upgrade or change browser.'
+    };
+    return translations[key] || key;
+}
