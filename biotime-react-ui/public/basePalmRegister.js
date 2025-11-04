@@ -956,10 +956,10 @@ function checkPalmDriver(isPalmLogin) {
     if(browserFlag == "upgradeBrowser"){
         if(isPalmLogin){
             $("#id_palm_identify").unbind();
-            $("#id_palm_identify").attr({disabled:"true",title:gettext("å½“å‰æµè§ˆå™¨ä¸æ”¯æŒè¯¥åŠŸèƒ½,è¯·å‡çº§æˆ–æ›´æ¢æµè§ˆå™¨.")});
+            $("#id_palm_identify").attr({disabled:"true",title:gettextBasePalm("å½“å‰æµè§ˆå™¨ä¸æ”¯æŒè¯¥åŠŸèƒ½,è¯·å‡çº§æˆ–æ›´æ¢æµè§ˆå™¨.")});
         }else{
             $("#id_palm_register").attr("onclick", "");
-            $("#id_palm_register").attr({disabled:"true",title:gettext("å½“å‰æµè§ˆå™¨ä¸æ”¯æŒè¯¥åŠŸèƒ½,è¯·å‡çº§æˆ–æ›´æ¢æµè§ˆå™¨.")});
+            $("#id_palm_register").attr({disabled:"true",title:gettextBasePalm("å½“å‰æµè§ˆå™¨ä¸æ”¯æŒè¯¥åŠŸèƒ½,è¯·å‡çº§æˆ–æ›´æ¢æµè§ˆå™¨.")});
         }
     }
 	else
@@ -1114,13 +1114,13 @@ var savePalmData = function(result) {
  * æç¤ºå®‰è£…é©±åŠ¨
  */
 function alertDialog(){
-    var msg = gettext('please.install.plam.detector.driver.license.first');
+    var msg = gettextBasePalm('please.install.plam.detector.driver.license.first');
     var message = '<div>'
         +'<div id="msg" class="alertDialog"><span>'+msg+'</span></div>'
         +'</div>';
 
     $(message).dialog({
-        title:gettext("æç¤º"),
+        title:gettextBasePalm("æç¤º"),
         on_load:function(obj){
                 $(message).find("#msg").css({width:(msg.length*10+100)+'px'});
         }
@@ -1129,30 +1129,65 @@ function alertDialog(){
 /**
  * --------------------æç¤ºä¿¡æ¯-----------------
  */
-var TIP1 = gettext("ZKPALM.ERR.OK"); //ret = 0 /**<  æ“ä½œæˆåŠŸ
-var TIP2 = gettext("ZKPALM.ERR.FAIL"); // -1 /**<  æ“ä½œå¤±è´¥
-var TIP3 = gettext("ZKPALM.ERR.NO.DEVICE"); // -2 /**<  è®¾å¤‡æœªè¿žæŽ¥
-var TIP4 = gettext("ZKPALM.ERR.NULL.POINT");// -3	 /**<  ç©ºæŒ‡é’ˆ
-var TIP5 = gettext("ZKPALM.ERR.INVALID.PARAM"); //-4	 /**<  æ— æ•ˆå‚æ•°
-var TIP6 = gettext("ZKPALM.ERR.NO.SUPPORT"); // -5	 /**<  ä¸æ”¯æŒ
-var TIP7 = gettext("ZKPALM.ERR.INITLIB");// -6	 /**<  åˆå§‹åŒ–ç®—æ³•åº“å¤±è´¥
-var TIP8 = gettext("ZKPALM.ERR.INVALID.HANDLE");// -7	 /**<  æ— æ•ˆå¥æŸ„
-var TIP9 = gettext("ZKPALM.ERR.NOT.DETECTED");// -8	 /**<  æœªæ£€æµ‹åˆ°æ‰‹æŽŒ
-var TIP10 = gettext("ZKPALM.ERR.MEMORY.NOT.ENOUGH");// -9	 /**<  è½¯ä»¶å†…å­˜åˆ†é…
-var TIP11 = gettext("ZKPALM.ERR.OUT.AREA");// -10	 /**<  æ‰‹æŽŒä¸åœ¨æŽŒå®šåŒºåŸŸ
-var TIP12 = gettext("ZKPALM.ERR.LOADACAMLIB.FAIL");// -11	 /**<  åŠ è½½ACAMåŠ¨æ€åº“å¤±è´¥
-var TIP13 = gettext("ZKPALM.ERR.SETLICDATAFAIL");// -12      /**<  è®¾ç½®è®¸å¯æ–‡ä»¶å¤±è´¥
-var TIP14 = gettext("ZKPALM.ERR.EXTRACT.FAIL");// -13      /**<  æå–æ¨¡æ¿å¤±è´¥
-var TIP15 = gettext("ZKPALM.ERR.LOADLIB.FAIL");// -14      /**<  åŠ è½½ç®—æ³•åº“å¤±è´¥
-var TIP16 = gettext("ZKPALM.ERR.TEMPLATE.ERROR");// -15      /**<  æ¨¡æ¿æ ¼å¼æœ‰è¯¯
-var TIP17 = gettext("ZKPALM.ERR.ALGORITHM.ALLOCATION.MEMORY.ERROR ");// -16  /**<  æ·»åŠ ç™»è®°æ¨¡æ¿åˆ°é«˜é€Ÿç¼“å†²åŒºå¤±è´¥(ç®—æ³•åˆ†é…å†…å­˜é”™è¯¯)
-var TIP18 = gettext("ZKPALM.ERR.TEMPLATE.FAIL");// -17      /**<  æ¨¡æ¿è½¬æ¢å¤±è´¥
-var TIP19 = gettext("ZKPALM.ERR.COMPARE.TEMPLATE.ERROR");// -18      /**<  è¦åˆæˆçš„æ¯”å¯¹æ¨¡æ¿æ•°æ®æœ‰è¯¯
-var TIP20 = gettext("ZKPALM.ERR.OPEN.DEVICE.FAIL");// -19      /**<  æ‰“å¼€è®¾å¤‡å¤±è´¥
-var TIP21 = gettext("ZKPALM.ERR.NO.HTTP.POST"); //-20     /**<  æœªä½¿ç”¨HTTP POST
-var TIP22 = gettext("ZKPALM.ERR.BASE64.CODE.FAIL"); //-21     /**<  base64ç¼–ç å¤±è´¥
-var TIP23 = gettext("ZKPALM.ERR.CREATE.COLLECTION.FAIL"); //-22     /**< åˆ›å»ºé‡‡é›†çº¿ç¨‹å¤±è´¥
-var TIP24 = gettext("ZKPALM.ERR.CONTINUE.TO.REGISTER"); //-23     /**<  è¯·ç»§ç»­é‡‡é›†æ‰‹æŽŒ
-var TIP25 = gettext("ZKPALM.ERR.NO.OPEN.DEVICE"); //-24     /**< æœªæ‰“å¼€è®¾å¤‡
-var TIP26 = gettext("ZKPALM.ERR.REPEAT.PALM"); //-25     /**< æŽŒçº¹é‡å¤å½•å…¥ï¼Œæ•°æ®åº“ä¸­å·²æœ‰è¯¥æŽŒçº¹
-var TIP27 = gettext("ZKPALM.ERR.OK.START"); //ret = 0 /**<  åˆå§‹åŒ–æ—¶æç¤º
+var TIP1 = gettextBasePalm("ZKPALM.ERR.OK"); //ret = 0 /**<  æ“ä½œæˆåŠŸ
+var TIP2 = gettextBasePalm("ZKPALM.ERR.FAIL"); // -1 /**<  æ“ä½œå¤±è´¥
+var TIP3 = gettextBasePalm("ZKPALM.ERR.NO.DEVICE"); // -2 /**<  è®¾å¤‡æœªè¿žæŽ¥
+var TIP4 = gettextBasePalm("ZKPALM.ERR.NULL.POINT");// -3	 /**<  ç©ºæŒ‡é’ˆ
+var TIP5 = gettextBasePalm("ZKPALM.ERR.INVALID.PARAM"); //-4	 /**<  æ— æ•ˆå‚æ•°
+var TIP6 = gettextBasePalm("ZKPALM.ERR.NO.SUPPORT"); // -5	 /**<  ä¸æ”¯æŒ
+var TIP7 = gettextBasePalm("ZKPALM.ERR.INITLIB");// -6	 /**<  åˆå§‹åŒ–ç®—æ³•åº“å¤±è´¥
+var TIP8 = gettextBasePalm("ZKPALM.ERR.INVALID.HANDLE");// -7	 /**<  æ— æ•ˆå¥æŸ„
+var TIP9 = gettextBasePalm("ZKPALM.ERR.NOT.DETECTED");// -8	 /**<  æœªæ£€æµ‹åˆ°æ‰‹æŽŒ
+var TIP10 = gettextBasePalm("ZKPALM.ERR.MEMORY.NOT.ENOUGH");// -9	 /**<  è½¯ä»¶å†…å­˜åˆ†é…
+var TIP11 = gettextBasePalm("ZKPALM.ERR.OUT.AREA");// -10	 /**<  æ‰‹æŽŒä¸åœ¨æŽŒå®šåŒºåŸŸ
+var TIP12 = gettextBasePalm("ZKPALM.ERR.LOADACAMLIB.FAIL");// -11	 /**<  åŠ è½½ACAMåŠ¨æ€åº“å¤±è´¥
+var TIP13 = gettextBasePalm("ZKPALM.ERR.SETLICDATAFAIL");// -12      /**<  è®¾ç½®è®¸å¯æ–‡ä»¶å¤±è´¥
+var TIP14 = gettextBasePalm("ZKPALM.ERR.EXTRACT.FAIL");// -13      /**<  æå–æ¨¡æ¿å¤±è´¥
+var TIP15 = gettextBasePalm("ZKPALM.ERR.LOADLIB.FAIL");// -14      /**<  åŠ è½½ç®—æ³•åº“å¤±è´¥
+var TIP16 = gettextBasePalm("ZKPALM.ERR.TEMPLATE.ERROR");// -15      /**<  æ¨¡æ¿æ ¼å¼æœ‰è¯¯
+var TIP17 = gettextBasePalm("ZKPALM.ERR.ALGORITHM.ALLOCATION.MEMORY.ERROR ");// -16  /**<  æ·»åŠ ç™»è®°æ¨¡æ¿åˆ°é«˜é€Ÿç¼“å†²åŒºå¤±è´¥(ç®—æ³•åˆ†é…å†…å­˜é”™è¯¯)
+var TIP18 = gettextBasePalm("ZKPALM.ERR.TEMPLATE.FAIL");// -17      /**<  æ¨¡æ¿è½¬æ¢å¤±è´¥
+var TIP19 = gettextBasePalm("ZKPALM.ERR.COMPARE.TEMPLATE.ERROR");// -18      /**<  è¦åˆæˆçš„æ¯”å¯¹æ¨¡æ¿æ•°æ®æœ‰è¯¯
+var TIP20 = gettextBasePalm("ZKPALM.ERR.OPEN.DEVICE.FAIL");// -19      /**<  æ‰“å¼€è®¾å¤‡å¤±è´¥
+var TIP21 = gettextBasePalm("ZKPALM.ERR.NO.HTTP.POST"); //-20     /**<  æœªä½¿ç”¨HTTP POST
+var TIP22 = gettextBasePalm("ZKPALM.ERR.BASE64.CODE.FAIL"); //-21     /**<  base64ç¼–ç å¤±è´¥
+var TIP23 = gettextBasePalm("ZKPALM.ERR.CREATE.COLLECTION.FAIL"); //-22     /**< åˆ›å»ºé‡‡é›†çº¿ç¨‹å¤±è´¥
+var TIP24 = gettextBasePalm("ZKPALM.ERR.CONTINUE.TO.REGISTER"); //-23     /**<  è¯·ç»§ç»­é‡‡é›†æ‰‹æŽŒ
+var TIP25 = gettextBasePalm("ZKPALM.ERR.NO.OPEN.DEVICE"); //-24     /**< æœªæ‰“å¼€è®¾å¤‡
+var TIP26 = gettextBasePalm("ZKPALM.ERR.REPEAT.PALM"); //-25     /**< æŽŒçº¹é‡å¤å½•å…¥ï¼Œæ•°æ®åº“ä¸­å·²æœ‰è¯¥æŽŒçº¹
+var TIP27 = gettextBasePalm("ZKPALM.ERR.OK.START"); //ret = 0 /**<  åˆå§‹åŒ–æ—¶æç¤º
+
+
+function gettextBasePalm(key) {
+    const translations = {
+        // ZKPALM Error Messages
+        'ZKPALM.ERR.OK': 'Operation succeeded',
+        'ZKPALM.ERR.FAIL': 'Operation failed',
+        'ZKPALM.ERR.NO.DEVICE': 'Device not connected',
+        'ZKPALM.ERR.NULL.POINT': 'Null pointer',
+        'ZKPALM.ERR.INVALID.PARAM': 'Invalid parameter',
+        'ZKPALM.ERR.NO.SUPPORT': 'Not supported',
+        'ZKPALM.ERR.INITLIB': 'Failed to initialize algorithm library',
+        'ZKPALM.ERR.INVALID.HANDLE': 'Invalid handle',
+        'ZKPALM.ERR.NOT.DETECTED': 'Palm not detected',
+        'ZKPALM.ERR.MEMORY.NOT.ENOUGH': 'Insufficient memory allocation',
+        'ZKPALM.ERR.OUT.AREA': 'Palm not within the designated region',
+        'ZKPALM.ERR.LOADACAMLIB.FAIL': 'Failed to load ACAM dynamic library',
+        'ZKPALM.ERR.SETLICDATAFAIL': 'Failed to set license file',
+        'ZKPALM.ERR.EXTRACT.FAIL': 'Failed to extract template',
+        'ZKPALM.ERR.LOADLIB.FAIL': 'Failed to load algorithm library',
+        'ZKPALM.ERR.TEMPLATE.ERROR': 'Invalid template format',
+        'ZKPALM.ERR.ALGORITHM.ALLOCATION.MEMORY.ERROR': 'Failed to add enrollment template to fast buffer (algorithm memory allocation error)',
+        'ZKPALM.ERR.TEMPLATE.FAIL': 'Template conversion failed',
+        'ZKPALM.ERR.COMPARE.TEMPLATE.ERROR': 'Error in comparison template data for fusion',
+        'ZKPALM.ERR.OPEN.DEVICE.FAIL': 'Failed to open device',
+        'ZKPALM.ERR.NO.HTTP.POST': 'HTTP POST not used',
+        'ZKPALM.ERR.BASE64.CODE.FAIL': 'Base64 encoding failed',
+        'ZKPALM.ERR.CREATE.COLLECTION.FAIL': 'Failed to create collection thread',
+        'ZKPALM.ERR.CONTINUE.TO.REGISTER': 'Please continue palm collection',
+        'ZKPALM.ERR.NO.OPEN.DEVICE': 'Device not opened',
+        'ZKPALM.ERR.REPEAT.PALM': 'Palm print already exists in database (duplicate enrollment)',
+        'ZKPALM.ERR.OK.START': 'Initialization prompt message'
+    };
+    return translations[key] || key;
+}

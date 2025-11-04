@@ -559,6 +559,62 @@ const BiometricManagementPage = () => {
         window.submitFaceRegister();
     };
 
+
+    const handleHardwarePalmRegistration = async () => {
+        // Check if required dependencies are available
+        if (typeof window.$ === 'undefined') {
+            setMessage('jQuery is required but not loaded properly.');
+            return;
+        }
+        
+        if (typeof window.submitFaceRegister === 'undefined') {
+            setMessage('submitFaceRegister function is not available. Please ensure faceCapture.js is loaded properly.');
+            return;
+        }
+        
+        let palmInput = document.getElementById('id_palms');
+        if (!palmInput) {
+            palmInput = document.createElement('input');
+            palmInput.type = 'hidden';
+            palmInput.id = 'id_palms';
+            palmInput.name = 'palms';
+            palmInput.value = "";
+            document.body.appendChild(palmInput);
+        } else {
+            palmInput.value = "";
+        }
+
+        let palmHelpInput = document.getElementById('id_palm_help');
+        if (!palmHelpInput) {
+            palmHelpInput = document.createElement('input');
+            palmHelpInput.type = 'hidden';
+            palmHelpInput.id = 'id_palm_help';
+            palmHelpInput.name = 'palmhelp';
+            palmHelpInput.value = "";
+            document.body.appendChild(palmHelpInput);
+        } else {
+            palmHelpInput.value = "";
+        }
+
+        let palmLngInput = document.getElementById('id_lng');
+        if (!palmLngInput) {
+            palmLngInput = document.createElement('input');
+            palmLngInput.type = 'hidden';
+            palmLngInput.id = 'id_lng';
+            palmLngInput.name = 'palmlng';
+            palmLngInput.value = "";
+            document.body.appendChild(palmLngInput);
+        } else {
+            palmLngInput.value = "";
+        }
+        
+        // NOW call the existing FetchFingerprint function with the user's pin
+        // This function will fetch existing fingerprints from the backend 
+        // and populate the id_templates field in the required format
+        window.checkPalmDriver(false);
+        window.submitPalmRegister();
+    };
+
     if (isLoading) {
         return (
             <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
@@ -803,9 +859,19 @@ const BiometricManagementPage = () => {
                     <Card>
                         <Card.Header className="d-flex justify-content-between align-items-center">
                             Unified Templates
-                            <Button variant="primary" size="sm" onClick={handleCreateUnifiedTemplate}>
-                                Add Unified Template
-                            </Button>
+                            <div className="d-flex gap-2">
+                                <Button variant="primary" size="sm" onClick={handleCreateUnifiedTemplate}>
+                                    Add Unified Template
+                                </Button>
+                                <Button 
+                                    variant="success" 
+                                    size="sm" 
+                                    onClick={handleHardwarePalmRegistration}
+                                    className="d-flex align-items-center"
+                                >
+                                    <FaFingerprint className="me-1" /> Enroll
+                                </Button>
+                            </div>
                         </Card.Header>
                         <Card.Body>
                             <div className="table-responsive">

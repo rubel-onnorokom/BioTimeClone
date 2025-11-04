@@ -331,30 +331,30 @@ class FaceDialog {
         let submitMethodString = submitMethod == null ? 'submitFaceEvent()' : submitMethod;
         let cancelMethodString = cancelMethod == null ? 'cancelFaceEvent()' : cancelMethod;
         return '<div style="position: absolute; left: 400px; top: 300px; width: auto; height: 28px; display: block;">'
-            + '  <button style="width: 142px" type="button" id="openCameraId" class="enroll-button" name="openCamera" onclick="OpenCamera();">'
-            + '      ' + gettext('btn_refreshCamera')
+            + '  <button style="background-color: #7AC142; color: white; border: none; width: 142px;" type="button" id="openCameraId" class="enroll-button" name="openCamera" onclick="OpenCamera();">'
+            + '      ' + gettextFace('btn_refreshCamera')
             + '  </button>'
             + '</div>'
             // + '<div style="position: absolute; left: 400px; top: 300px; width: auto; height: 28px; display: block;">'
-            // + '  <button style="width: 142px" type="button" id="closeCameraId" class="enroll-button" name="closeCamera" onclick="CloseCamera();">'
-            // + '      ' + gettext('btn_closeCamera')
+            // + '  <button style="background-color: #7AC142; color: white; border: none; width: 142px;" type="button" id="closeCameraId" class="enroll-button" name="closeCamera" onclick="CloseCamera();">'
+            // + '      ' + gettextFace('btn_closeCamera')
             // + '  </button>'
             // + '</div>'
             + '<div style="position: absolute; left: 400px; top: 340px; width: auto; height: 28px; display: block;">'
-            + '  <button style="width: 142px" type="button" id="captureImageButtonId" class="enroll-button" name="captureImage" onclick="CapFaceImage();">'
-            + '      ' + gettext('btn_capture')
+            + '  <button style="background-color: #7AC142; color: white; border: none; width: 142px;" type="button" id="captureImageButtonId" class="enroll-button" name="captureImage" onclick="CapFaceImage();">'
+            + '      ' + gettextFace('btn_capture')
             + '  </button>'
             + '</div>'
             + '<div style="position: absolute; left: 400px; top: 380px; width: auto; height: 28px; display: block;">'
-            + '  <button style="width: 142px" type="button" id="submitFaceButtonId" class="enroll-button" name="makeSureName" onclick="'
+            + '  <button style="background-color: #7AC142; color: white; border: none; width: 142px;" type="button" id="submitFaceButtonId" class="enroll-button" name="makeSureName" onclick="'
             + submitMethodString + ';">'
-            + '      ' + gettext('btn_confirm')
+            + '      ' + gettextFace('btn_confirm')
             + '  </button>'
             + '</div>'
             + '<div style="position: absolute; left: 400px; top: 420px; width: auto; height: 28px; display: block;">'
-            + '  <button style="width: 142px" type="button" id="closeFaceButton" class="enroll-button" name="closeFaceButton" onclick="'
+            + '  <button style="background-color: #7AC142; color: white; border: none; width: 142px;" type="button" id="closeFaceButton" class="enroll-button" name="closeFaceButton" onclick="'
             + cancelMethodString + ';">'
-            + '      ' + gettext('btn_cancel')
+            + '      ' + gettextFace('btn_cancel')
             + '  </button>'
             + '</div>'
             + '<div style="position: absolute;top: 40px;width: 100%;text-align: center;display: none;"'
@@ -408,7 +408,7 @@ class FaceDialog {
         } else {
             overrideLayerDialog();
             let options = {
-                title: gettext("faceRegister_face_register"),
+                title: gettextFace("faceRegister_face_register"),
                 skin: 'option_dialog',
                 area: ['600px', '530px'],
                 resize: false,
@@ -435,16 +435,16 @@ class FaceDialog {
         }
         setTimeout(function () {
             if (!parent.faceService.IsConnected) {
-                let msg = gettext('please_install_driver_or_start_service')
+                let msg = gettextFace('please_install_driver_or_start_service')
                     + '<br /><a href="/files/help/ZKFaceCapOnline.exe" style="color:red;">'
-                    + gettext('Download_Driver') + '</a>'
+                    + gettextFace('Download_Driver') + '</a>'
 
                 $('#cameraContentId').html(msg).show();
                 //layer.msg(msg, {
                 //    icon: 5,
                 //    time: 0,
                 //    closeBtn: 2,
-                //    title: gettext('pop_window_title')
+                //    title: gettextFace('pop_window_title')
                 //});
             }
         }, 3000);
@@ -480,7 +480,7 @@ function CapFaceImage() {
         $('#capturedImgId').attr('src', String.format('data:image/jpg;base64,{0}', image));
         //layer.open({
         //    type: 1,
-        //    title: gettext("preview"),
+        //    title: gettextFace("preview"),
         //    closeBtn: 1,
         //    area: ['350', '420'],
         //    shadeClose: true,
@@ -530,21 +530,21 @@ class Messages_FC {
     }
 
     static _dicTips = {
-        "0": gettext("faRegister_0"),//"Operate Successfully",// "成功",
-        "-10001": gettext("faRegister_-10001"),//"Invalid Params",//"无效参数或者参数格式错误",
-        "-10002": gettext("faRegister_-10002"),//"Device Is Connected",//"设备已连接",
-        "-10003": gettext("faRegister_-10003"),//"Operate Timeout",//"设置超时时间失败",
-        "-10004": gettext("faRegister_-10004"),//"Device Is Busy",//"设备忙打开失败",
-        "-10005": gettext("faRegister_-10005"),//"Open Device Failed",//"打开设备失败",
-        "-10006": gettext("faRegister_-10006"),//"Device Is Closed",//"设备未打开",
-        "-10007": gettext("faRegister_-10007"),//"Unknown Module",//"无效模块/未知模块",
-        "-10008": gettext("faRegister_-10008"),//"Checking Failed",//"自检失败",
-        "-10009": gettext("faRegister_-10009"),//"Failed To Close Device",//"关闭设备失败",
-        "-10010": gettext("faRegister_-10010"),//"Waiting To Capture",//"未开始采集",
+        "0": gettextFace("faRegister_0"),//"Operate Successfully",// "成功",
+        "-10001": gettextFace("faRegister_-10001"),//"Invalid Params",//"无效参数或者参数格式错误",
+        "-10002": gettextFace("faRegister_-10002"),//"Device Is Connected",//"设备已连接",
+        "-10003": gettextFace("faRegister_-10003"),//"Operate Timeout",//"设置超时时间失败",
+        "-10004": gettextFace("faRegister_-10004"),//"Device Is Busy",//"设备忙打开失败",
+        "-10005": gettextFace("faRegister_-10005"),//"Open Device Failed",//"打开设备失败",
+        "-10006": gettextFace("faRegister_-10006"),//"Device Is Closed",//"设备未打开",
+        "-10007": gettextFace("faRegister_-10007"),//"Unknown Module",//"无效模块/未知模块",
+        "-10008": gettextFace("faRegister_-10008"),//"Checking Failed",//"自检失败",
+        "-10009": gettextFace("faRegister_-10009"),//"Failed To Close Device",//"关闭设备失败",
+        "-10010": gettextFace("faRegister_-10010"),//"Waiting To Capture",//"未开始采集",
     }
 }
 
-function gettext(key) {
+function gettextFace(key) {
     const translations = {
         'btn_refreshCamera': 'Refresh Camera',
         'btn_capture': 'Capture',

@@ -975,8 +975,8 @@ class FPRegister {
                     } else {
                         this.cancelCapture();
                         layer.confirm(Messages.tip5, {
-                            title: gettext("btn_confirm")
-                            , btn: [gettext("btn_confirm"), gettext("btn_cancel")]
+                            title: gettextFinger("btn_confirm")
+                            , btn: [gettextFinger("btn_confirm"), gettextFinger("btn_cancel")]
                         }, function (index) {
                             layer.close(index);
                             parent.delFPData(parent.currentFPNum, context);
@@ -1026,7 +1026,7 @@ class FPRegister {
     initControls() {
         return ''
             + '<div id="' + this.id_fpVersion_div + '" style="position: absolute; left: 320px; top: 257px; width: 130px; height: 56px; diaplay: block;">'
-            + '<p style="word-break: keep-all;color: #7AC142">' + gettext('fingerprint_version') + '</p>'
+            + '<p style="word-break: keep-all;color: #7AC142">' + gettextFinger('fingerprint_version') + '</p>'
             + '<div style="position: absolute;  top: 28px; width: 70px; height: 28px; diaplay: block;">'
             + '<select lay-ignore name = "fp_version" id = "' + this.id_fpVersion_select + '">'
             + '<option value="0">All</option>'
@@ -1034,13 +1034,13 @@ class FPRegister {
             + '</div>'
             + '</div>'
             + '<div style="position: absolute; left: 310px; top: 325px; width: 70px; height: 28px; diaplay: block;">'
-            + '  <button type="button" id="' + this.id_submit_button + '" class="enroll-button" name="makeSureName" onclick="submitEvent();">'
-            + '      ' + gettext('btn_confirm')
+            + '  <button type="button" id="' + this.id_submit_button + '" class="enroll-button" name="makeSureName" onclick="submitEvent();" style="background-color: #7AC142; color: white; border: none; width: 100%; height: 100%;">'
+            + '      ' + gettextFinger('btn_confirm')
             + '  </button>'
             + '</div>'
             + '<div style="position: absolute; left: 310px; top: 365px; width: 70px; height: 28px; diaplay: block;">'
-            + '  <button type="button" id="' + this.id_close_button + '" class="enroll-button" name="closeButton" onclick="cancelEvent()">'
-            + '      ' + gettext('btn_cancel')
+            + '  <button type="button" id="' + this.id_close_button + '" class="enroll-button" name="closeButton" onclick="cancelEvent()" style="background-color: #7AC142; color: white; border: none; width: 100%; height: 100%;">'
+            + '      ' + gettextFinger('btn_cancel')
             + '  </button>'
             + '</div>';
     }
@@ -1419,7 +1419,7 @@ class FPRegister {
             let parent = this;
             overrideLayerDialog();
             let options = {
-                title: gettext("fpRegister_fingerprint_register"),
+                title: gettextFinger("fpRegister_fingerprint_register"),
                 skin: 'option_dialog',
                 resize: false,
                 success: function (layero, index) {
@@ -1751,13 +1751,13 @@ function submitRegister() {
     if (driverIsReady) {
         fpRegister.showForm();
     } else {
-        let msg = gettext('please_install_driver_or_start_service') + '<br /><a href="/files/help/Fingerprint Reader Driver.exe" style="color:red;">Download Driver</a>'
+        let msg = gettextFinger('please_install_driver_or_start_service') + '<br /><a href="/files/help/Fingerprint Reader Driver.exe" style="color:red;">Download Driver</a>'
 
         layer.msg(msg, {
             icon: 5,
             time: 0,
             closeBtn: 2,
-            title: gettext('pop_window_title')
+            title: gettextFinger('pop_window_title')
         });
     }
 }
@@ -1787,10 +1787,10 @@ function checkDriver(isFPLogin) {
     if (browserFlag === "upgradeBrowser") {
         if (isFPLogin) {
             $("#id_fp_identify").unbind();
-            $("#id_fp_identify").attr({ disabled: "true", title: gettext("Current browser does not support this feature, please upgrade or change browser.") });
+            $("#id_fp_identify").attr({ disabled: "true", title: gettextFinger("Current browser does not support this feature, please upgrade or change browser.") });
         } else {
             $("#id_fp_register").attr("onclick", "");
-            $("#id_fp_register").attr({ disabled: "true", title: gettext("Current browser does not support this feature, please upgrade or change browser.") });
+            $("#id_fp_register").attr({ disabled: "true", title: gettextFinger("Current browser does not support this feature, please upgrade or change browser.") });
         }
     } else {
         FPDriver.info(function (res) {
@@ -1831,18 +1831,18 @@ class Messages {
         }
     }
     static dicTips = {
-        "-2001": gettext("fpRegister_alert_readerNotDetected"),
-        "-2002": gettext("fpRegister_connectionError_loadFP10failed"),
-        "tip1": gettext("fpRegister_alert_fingerNotSelect"),
-        "tip3": gettext("fpRegister_tip_pressRemaining"),
-        "tip4": gettext("fpRegister_tip_fingerprintRegistered"),
-        "tip5": gettext("fpRegister_alert_deleteSelectedFingerprint"),
-        "tip6": gettext("fpRegister_tip_registerSuccessful"),
-        "tip7": gettext("fpRegister_alert_loadDLLFailed"),
-        "tip8": gettext("fpRegister_alert_fingerprintDuplicate"),
-        "tip9": gettext("fpRegister_alert_serviceStop"),
-        "tip10": gettext("fpRegister_alert_pressAgain"),
-        "tip11": gettext("fpRegister_alert_licenseFailed"),
+        "-2001": gettextFinger("fpRegister_alert_readerNotDetected"),
+        "-2002": gettextFinger("fpRegister_connectionError_loadFP10failed"),
+        "tip1": gettextFinger("fpRegister_alert_fingerNotSelect"),
+        "tip3": gettextFinger("fpRegister_tip_pressRemaining"),
+        "tip4": gettextFinger("fpRegister_tip_fingerprintRegistered"),
+        "tip5": gettextFinger("fpRegister_alert_deleteSelectedFingerprint"),
+        "tip6": gettextFinger("fpRegister_tip_registerSuccessful"),
+        "tip7": gettextFinger("fpRegister_alert_loadDLLFailed"),
+        "tip8": gettextFinger("fpRegister_alert_fingerprintDuplicate"),
+        "tip9": gettextFinger("fpRegister_alert_serviceStop"),
+        "tip10": gettextFinger("fpRegister_alert_pressAgain"),
+        "tip11": gettextFinger("fpRegister_alert_licenseFailed"),
     };
     static tip1 = this.getMessage("tip1");
     static tip2 = this.getMessage("-2001");
@@ -1858,7 +1858,7 @@ class Messages {
 }
 
 
-function gettext(key) {
+function gettextFinger(key) {
     const translations = {
         'fpRegister_duress_fingerprint': 'Duress Fingerprint',
         'fingerprint_version': 'Fingerprint Version',

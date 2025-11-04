@@ -57,7 +57,7 @@ function drawPalms(context, coordArray, color, x, y, num){
     //console.log('å°†ç»˜ç”»çš„æ‰‹æŽŒå®žä¾‹æ”¾å…¥æ•°ç»„')
     palmList.push(drawObj);
     //ç»˜ç”»åœ†åœˆå›¾ç‰‡
-    showPalmImage(context, "/media/images/abroad_att/base_palmVerify_clearImage.png", "clearForRegister");
+    showPalmImage(context, "/base_palmVerify_clearImage.png", "clearForRegister");
 
 }
 /**
@@ -370,10 +370,10 @@ function redrawPalm(x, y) {
                         //å–æ¶ˆé‡‡é›†
                         cancelPalmRegister();
                         if(TIP21) {
-                            layer.confirm(gettext('are.you.sure.you.want.to.delete...?'),
+                            layer.confirm(gettextEmpPalm('are.you.sure.you.want.to.delete...?'),
                                 {
-                                    title: gettext('palm.prompt'),
-                                    btn: [gettext('btn.confirm'), gettext('btn.cancel')],
+                                    title: gettextEmpPalm('palm.prompt'),
+                                    btn: [gettextEmpPalm('btn.confirm'), gettextEmpPalm('btn.cancel')],
                                     yes: function (index) {
                                         delPalmData(true, context, "html5");
                                         layer.close(index);
@@ -532,24 +532,24 @@ function showPalmRegister() {
     $(template).append(canvas);
     var buttons = ''
         + '<div style="position: absolute; left: 375px; top: 90px; width: 140px; height: 160px; diaplay: block;">'
-        +'<img src="/media/images/GIF.jpg">'
+        +'<img src="/GIF.jpg">'
         + '</div>'
         // + '<div style="position: absolute; left: 375px; top: 270px; width: 140px; height: 160px; diaplay: block;font-size:1px">'
-        // +'      '+gettext("please.place.your.hand.parallel.to.the.scanner.10cm.away.from.the.scanner.")
+        // +'      '+gettextEmpPalm("please.place.your.hand.parallel.to.the.scanner.10cm.away.from.the.scanner.")
         // + '</div>'
         +'<div style="position: absolute; left: 410px; top: 340px; width: 70px; height: 28px; diaplay: block;">'
-        +'  <button type="button" id="submitPalmButtonId" class="enroll-button" name="makeSureName" onclick="submitPalmEvent();">'
-        +'      '+gettext('btn.confirm')
+        +'  <button style="background-color: #7AC142; color: white; border: none; width: 100%; height: 100%;" type="button" id="submitPalmButtonId" class="enroll-button" name="makeSureName" onclick="submitPalmEvent();">'
+        +'      '+gettextEmpPalm('btn.confirm')
         +'  </button>'
         +'</div>'
         +'<div style="position: absolute; left: 410px; top: 380px; width: 70px; height: 28px; diaplay: block;">'
-        +'  <button type="button" id="closePalmButton" class="enroll-button" name="closePalmButton" onclick="cancelPalmEvent()">'
-        +'      '+gettext('btn.cancel')
+        +'  <button style="background-color: #7AC142; color: white; border: none; width: 100%; height: 100%;" type="button" id="closePalmButton" class="enroll-button" name="closePalmButton" onclick="cancelPalmEvent()">'
+        +'      '+gettextEmpPalm('btn.cancel')
         +'  </button>'
         +'</div>';
     $(template).append(buttons);
     var options = {
-        title: gettext("palmRegister.palm.register"),
+        title: gettextEmpPalm("palmRegister.palm.register"),
         skin: 'option_dialog',
         resize: false,
         success: function(layero, index){
@@ -599,13 +599,13 @@ function showPALMRegister(){
 function submitPalmRegister() {
     var index = layer.load(4);
     if(!canPalmConnection){
-        var msg = gettext('please_install_driver_or_start_service') + '<br /><a href="http://time.xmzkteco.com:8097/files/help/ZKBioOnline.exe" style="color:red;">Download Driver</a>'
+        var msg = gettextEmpPalm('please_install_driver_or_start_service') + '<br /><a href="/files/help/ZKBioOnline.exe" style="color:red;">Download Driver</a>'
 
         layer.msg(msg, {
             icon: 5,
             time: 0,
             closeBtn: 2,
-            title: gettext('pop_window_title')
+            title: gettextEmpPalm('pop_window_title')
         });
 
         layer.close(index);
@@ -620,3 +620,49 @@ $(function(){
     $("#id_palm_help a").attr("href", "files/help/fingerprintDriverInstall.html");
     checkPalmDriver(false);
 });
+
+
+function gettextEmpPalm(key) {
+    const translations = {
+        // UI & General
+        'btn.confirm': 'Confirm',
+        'btn.cancel': 'Cancel',
+        'palmRegister.palm.register': 'Palm Registration',
+        'please_install_driver_or_start_service': 'Please install driver or start service',
+        'pop_window_title': 'System Notice',
+        'palm.prompt': 'Palm Prompt',
+        'are.you.sure.you.want.to.delete...?': 'Are you sure you want to delete?',
+        'Ã¥Â½â€œÃ¥â€°ÂÃ¦ÂµÂÃ¨Â§Ë†Ã¥â„¢Â¨Ã¤Â¸ÂÃ¦â€Â¯Ã¦Å’ÂÃ¨Â¯Â¥Ã¥Å Å¸Ã¨Æ’Â½,Ã¨Â¯Â·Ã¥Ââ€¡Ã§ÂºÂ§Ã¦Ë†â€“Ã¦â€ºÂ´Ã¦ÂÂ¢Ã¦ÂµÂÃ¨Â§Ë†Ã¥â„¢Â¨.': 
+            'Current browser does not support this feature, please upgrade or change browser.',
+
+        // ZKPALM Error Messages
+        'ZKPALM.ERR.OK': 'Operation succeeded',
+        'ZKPALM.ERR.FAIL': 'Operation failed',
+        'ZKPALM.ERR.NO.DEVICE': 'Device not connected',
+        'ZKPALM.ERR.NULL.POINT': 'Null pointer',
+        'ZKPALM.ERR.INVALID.PARAM': 'Invalid parameter',
+        'ZKPALM.ERR.NO.SUPPORT': 'Not supported',
+        'ZKPALM.ERR.INITLIB': 'Failed to initialize algorithm library',
+        'ZKPALM.ERR.INVALID.HANDLE': 'Invalid handle',
+        'ZKPALM.ERR.NOT.DETECTED': 'Palm not detected',
+        'ZKPALM.ERR.MEMORY.NOT.ENOUGH': 'Insufficient memory allocation',
+        'ZKPALM.ERR.OUT.AREA': 'Palm not within the designated region',
+        'ZKPALM.ERR.LOADACAMLIB.FAIL': 'Failed to load ACAM dynamic library',
+        'ZKPALM.ERR.SETLICDATAFAIL': 'Failed to set license file',
+        'ZKPALM.ERR.EXTRACT.FAIL': 'Failed to extract template',
+        'ZKPALM.ERR.LOADLIB.FAIL': 'Failed to load algorithm library',
+        'ZKPALM.ERR.TEMPLATE.ERROR': 'Invalid template format',
+        'ZKPALM.ERR.ALGORITHM.ALLOCATION.MEMORY.ERROR': 'Failed to add enrollment template to fast buffer (algorithm memory allocation error)',
+        'ZKPALM.ERR.TEMPLATE.FAIL': 'Template conversion failed',
+        'ZKPALM.ERR.COMPARE.TEMPLATE.ERROR': 'Error in comparison template data for fusion',
+        'ZKPALM.ERR.OPEN.DEVICE.FAIL': 'Failed to open device',
+        'ZKPALM.ERR.NO.HTTP.POST': 'HTTP POST not used',
+        'ZKPALM.ERR.BASE64.CODE.FAIL': 'Base64 encoding failed',
+        'ZKPALM.ERR.CREATE.COLLECTION.FAIL': 'Failed to create collection thread',
+        'ZKPALM.ERR.CONTINUE.TO.REGISTER': 'Please continue palm collection',
+        'ZKPALM.ERR.NO.OPEN.DEVICE': 'Device not opened',
+        'ZKPALM.ERR.REPEAT.PALM': 'Palm print already exists in database (duplicate enrollment)',
+        'ZKPALM.ERR.OK.START': 'Initialization prompt message'
+    };
+    return translations[key] || key;
+}
