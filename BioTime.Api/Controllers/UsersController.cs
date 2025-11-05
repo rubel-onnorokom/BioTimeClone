@@ -893,12 +893,12 @@ namespace BioTime.Api.Controllers
                     {
                         reportEntry.OutTime = lastPunch.ToString("hh:mm:ss tt", CultureInfo.InvariantCulture); // Format to 12-hour string
                         TimeSpan workingHours = lastPunch - firstPunch;
-                        reportEntry.WorkingHours = workingHours.ToString("hh:mm", CultureInfo.InvariantCulture); // Format to HH:mm
+                        reportEntry.WorkingHours = workingHours.ToString(@"hh\:mm", CultureInfo.InvariantCulture); // Format to HH:mm
                     }
                     else
                     {
                         reportEntry.OutTime = null;
-                        reportEntry.WorkingHours = TimeSpan.Zero.ToString("hh:mm", CultureInfo.InvariantCulture); // "00:00"
+                        reportEntry.WorkingHours = TimeSpan.Zero.ToString(@"hh\:mm", CultureInfo.InvariantCulture); // "00:00"
                     }
                     reportEntry.Zone = dailyLogs.FirstOrDefault()?.Device?.Area?.Name;
                 }
@@ -916,7 +916,7 @@ namespace BioTime.Api.Controllers
             {
                 if (!string.IsNullOrEmpty(entry.WorkingHours))
                 {
-                    TimeSpan entryWorkingHours = TimeSpan.ParseExact(entry.WorkingHours, "hh:mm", CultureInfo.InvariantCulture);
+                    TimeSpan entryWorkingHours = TimeSpan.ParseExact(entry.WorkingHours, @"hh\:mm", CultureInfo.InvariantCulture);
                     totalWorkingHours = totalWorkingHours.Add(entryWorkingHours);
                 }
                 if (entry.IsLateEntry)
